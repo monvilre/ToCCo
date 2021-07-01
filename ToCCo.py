@@ -9,14 +9,14 @@ import matplotlib.pyplot as plt
 from sympy.parsing.sympy_parser import parse_expr
 import numpy as np
 import mpmath as mp
-import params_dexp
+import params
 from sympy import symbols, Function, Eq
 from itertools import product as comb
 from sympy.solvers.ode.systems import canonical_odes, linear_ode_to_matrix, linodesolve, linodesolve_type, _classify_linear_system, _linear_ode_solver, matrix_exp_jordan_form
 #
 # from sympy.solvers.ode.subscheck import checkodesol
 
-mp.mp.dps = params_dexp.prec
+mp.mp.dps = params.prec
 C = CoordSys3D('C')
 
 #######################
@@ -293,8 +293,8 @@ def surfcond_2(val, dic):
 
 def Bound_nosolve(U, B, psi, psi_2b, dic, order_v,order_t):
     nn = n.xreplace(dic).doit()
-    condB = params_dexp.condB
-    condU = params_dexp.condU
+    condB = params.condB
+    condU = params.condU
 
     if (condB == "harm pot"):
         un = U.dot(nn)
@@ -304,7 +304,7 @@ def Bound_nosolve(U, B, psi, psi_2b, dic, order_v,order_t):
         Eq_bx = Eq_b & C.i
         Eq_by = Eq_b & C.j
         Eq_bz = Eq_b & C.k
-        if params_dexp.Bound_nb == 2:
+        if params.Bound_nb == 2:
             bb2 = B + gradient(psi_2b)
             Eq_b2 = surfcond_2(bb2, dic)
             Eq_b2x = Eq_b2 & C.i
@@ -318,7 +318,7 @@ def Bound_nosolve(U, B, psi, psi_2b, dic, order_v,order_t):
             else:
                 TEq = [(taylor(eq, order_v,order_t, dic)) for eq in [Eq_n1, Eq_n2,
                                                        Eq_bx, Eq_by, Eq_bz, Eq_b2x, Eq_b2y, Eq_b2z]]
-        elif params_dexp.Bound_nb == 1:
+        elif params.Bound_nb == 1:
             if  order_v == 'no':
                 TEq = [Eq_n1, Eq_n2,Eq_bx, Eq_by, Eq_bz]
             else:
@@ -342,7 +342,7 @@ def Bound_nosolve(U, B, psi, psi_2b, dic, order_v,order_t):
         Eq_by = conservation_B&C.j
         Eq_bz = conservation_B&C.k
 
-        if params_dexp.Bound_nb == 2:
+        if params.Bound_nb == 2:
             nn2 = n2.xreplace(dic).doit()
             un2 = U.dot(nn2)
             Eq_n2 = surfcond_2(un2, dic)
@@ -362,7 +362,7 @@ def Bound_nosolve(U, B, psi, psi_2b, dic, order_v,order_t):
             else:
                 TEq = [(taylor(eq, order_v,order_t, dic)) for eq in [Eq_n1, Eq_n2,
                                                        Eq_bx, Eq_by, Eq_bz, Eq_b2x, Eq_b2y, Eq_b2z, Eq_Ex,Eq_Ey, Eq_E2x,Eq_E2y]]
-        elif params_dexp.Bound_nb == 1:
+        elif params.Bound_nb == 1:
 
             if  order_v == 'no':
                 TEq = [Eq_n1, Eq_by, Eq_bx,Eq_bz,Eq_Ex,Eq_Ey]
@@ -381,10 +381,10 @@ def Bound_nosolve(U, B, psi, psi_2b, dic, order_v,order_t):
 #########################
 
 
-order = params_dexp.order
-Bound_nb = params_dexp.Bound_nb
-buf = params_dexp.buf
-atmo = params_dexp.atmo
+order = params.order
+Bound_nb = params.Bound_nb
+buf = params.buf
+atmo = params.atmo
 x = C.x
 y = C.y
 z = C.z
@@ -451,7 +451,7 @@ nx = (nfo & C.i)
 ny = (nfo & C.j)
 nz = (nfo & C.k)
 
-if params_dexp.dom[f1] != 0:
+if params.dom[f1] != 0:
     tfox = (C.i) + ((ny / nx) * C.j) + (-((nx**2 + ny**2) / (nx * nz)) * C.k)
     tfox = tfox / sqrt((tfox & C.i)**2 + (tfox & C.j)**2 + (tfox & C.k)**2)
     tfoy = (-(ny / nx) * C.i) + (C.j) + (0 * C.k)
@@ -468,7 +468,7 @@ if Bound_nb == 2:
     nx2 = (nfo2 & C.i)
     ny2 = (nfo2 & C.j)
     nz2 = (nfo2 & C.k)
-    if params_dexp.dom[f1_2] != 0:
+    if params.dom[f1_2] != 0:
         tfox2 = (C.i) + ((ny2 / nx2) * C.j) + \
             (-((nx2**2 + ny2**2) / (nx2 * nz2)) * C.k)
         tfox2 = -tfox2 / sqrt((tfox2 & C.i)**2 +
@@ -486,15 +486,15 @@ if Bound_nb == 2:
 ######################
 
 # Parameters chosen for calculation
-dico0 = params_dexp.dom
-# dico1 = params_dexp.Buffet2010
-dico1 = params_dexp.Glane
-# dico1 = params_dexp.Me
+dico0 = params.dom
+# dico1 = params.Buffet2010
+dico1 = params.Glane
+# dico1 = params.Me
 
-LAT = params_dexp.LAT
+LAT = params.LAT
 
 ##### CHECK the realness of imposed Field
-if params_dexp.test == 1:
+if params.test == 1:
     testre = Matrix([dico0[u0x],dico0[u0y],dico0[u0z],dico0[b0x],dico0[b0y],dico0[b0z],dico0[f1],dico0[f1_2]])
     testre = np.imag(np.sum(np.array((testre.xreplace({x:10,y:10,t:10,omega:10,ev:1}).evalf()),dtype= np.complex128)))
     if testre > 1e-15:
@@ -502,7 +502,7 @@ if params_dexp.test == 1:
         raise ValueError
 
 
-if dico1[qRe] != 0 and params_dexp.condU == 'Inviscid':
+if dico1[qRe] != 0 and params.condU == 'Inviscid':
     print("error Inviscid fluid incompatible with qRe != 0")
     raise(ValueError)
 
@@ -552,7 +552,7 @@ for i in range(0, len(orders)):
         print('U0 : ',U)
         print('B0 : ',B)
 
-        if params_dexp.condB=='Thick':
+        if params.condB=='Thick':
             psi_2b = Symbol('psi0x_2b')*C.i+Symbol('psi0y_2b')*C.j+Symbol('psi0z_2b')*C.k
             psi_2b=psi_2b+(Symbol('psi0x_2b_z')*C.i+Symbol('psi0y_2b_z')*C.j+Symbol('psi0z_2b_z')*C.k)*z
 
@@ -566,7 +566,7 @@ for i in range(0, len(orders)):
                 Symbol('psi0y_z'),Symbol('psi0z_z'),Symbol('psi0x_2b'),Symbol('psi0y_2b'),
                 Symbol('psi0z_2b_z'),Symbol('psi0x_2b_z'),Symbol('psi0y_2b_z'),Symbol('psi0z_2b_z')]
 
-        if params_dexp.condB=='harm pot':
+        if params.condB=='harm pot':
 
             psi = Symbol('psi0')+Symbol('psi0_x')*x+Symbol('psi0_y')*y+Symbol('psi0_z')*z
             psi_2b = Symbol('psi0_2b')+Symbol('psi0_x_2b')*x+Symbol('psi0_y_2b')*y+Symbol('psi0_z_2b')*z
@@ -609,7 +609,7 @@ for i in range(0, len(orders)):
         soeqp = solve(eqP,[Symbol('P0_x'),Symbol('P0_y'),Symbol('P0_z')],rational=False)
         p = p.xreplace(soeqp)
 
-        if params_dexp.condB =="Thick":
+        if params.condB =="Thick":
             TEq = Bound_nosolve(U, B, psi, psi_2b, {**dico0, **dico1}, iv,it)
             expo = findexp(TEq)
             B0 = B
@@ -833,7 +833,7 @@ for i in range(0, len(orders)):
         psopart = so_part[3]
         rhosopart = so_part[7]
         ### test of res of particular sol ###
-        if params_dexp.test == 1:
+        if params.test == 1:
             print('Test of the particular solutions at order E',(iv,it))
             testequations = makeEquations(
                 U + ev**iv * et**it * Usopart, B + ev**iv * et**it * Bsopart, p + ev**iv * et**it * psopart, rho + ev**iv * et**it * rhosopart, iv,it, {**dico0, **dico1})
@@ -870,7 +870,7 @@ for i in range(0, len(orders)):
 
             Uh = Uh + ev**iv * et**it * (Symbol('u' + str(i) + 'x') * C.i + Symbol(
                 'u' + str(i) + 'y') * C.j + Symbol('u' + str(i) + 'z') * C.k) * ansatz
-            # if iv==1 and it ==0 and params_dexp.condB =='Thick':
+            # if iv==1 and it ==0 and params.condB =='Thick':
             #     Bh = Bh + ev**iv * et**it * (Symbol('b' + str(i) + 'x') * C.i + Symbol(
             #         'b' + str(i) + 'y') * C.j ) * ansatz
             # else:
@@ -890,7 +890,7 @@ for i in range(0, len(orders)):
         expeq = findexp(Mhtot)
 
 
-        if params_dexp.test == 1:
+        if params.test == 1:
             print('rmehtot', simplify(simplify(rmehtot.xreplace({**dico0, **dico1}).xreplace(
                 {x: 0, y: 0, t: 0, z: 0}).evalf())))
 
@@ -943,7 +943,7 @@ for i in range(0, len(orders)):
                 'b' + str(i) + 'y') * C.j + Symbol('b' + str(i) + 'z') * C.k))).xreplace(makedic(veigen(eig[j], sol[j]), i))
 
             psian = ev**iv * et**it * Symbol('psi' + str(i)) * ansatz
-            if params_dexp.condB == "harm pot":
+            if params.condB == "harm pot":
                 kzpsi[j] = np.array(solve(simplify(laplacian(psian) / psian), kz,rational=False))
                 kzpsi[j] = kzpsi[j][[
                     np.imag(np.complex128(kps)) >= 0 for kps in kzpsi[j]]][0]
@@ -954,7 +954,7 @@ for i in range(0, len(orders)):
                     psiBnd_2 = psiBnd_2 + ev**iv * et**it * \
                         (Symbol('psi_2b' + str(i)) * ansatz).xreplace({kz: kzpsi_2[j]})
 
-            if params_dexp.condB == "Thick":
+            if params.condB == "Thick":
 
                 if buf ==1:
                     kzpsi[j] = np.array(solve(simplify((diff(psian,t)-qRmm*diff(psian,z,z)) / psian).xreplace({**dico1,**dico0}), kz,rational=False))
@@ -974,7 +974,7 @@ for i in range(0, len(orders)):
                     psiBnd_2 = psiBnd_2 + ev**iv * et**it * \
                         ((Symbol('bmx_2')*C.i+ Symbol('bmy_2')*C.j + Symbol('bmz_2')*C.k) * ansatz).xreplace({kz: kzpsi_2[j]})
         # Calculate boundary conditions equations
-        # if params_dexp.test == 1:
+        # if params.test == 1:
         #     print('Mhtotcount', simplify(simplify(Mhtotcount)))
 
 
@@ -987,7 +987,7 @@ for i in range(0, len(orders)):
             **dico0, **dico1}, iv,it)
     # Decompose equations by exponential create and solve matrix
 
-        if params_dexp.condB == "Thick":
+        if params.condB == "Thick":
             if Bound_nb == 1:
                 coeffs = [Symbol('C' + str(i)) for i in range(len(Eqbound)-3)]+ [Symbol('bmx'),Symbol('bmy'),Symbol('bmz')]
             if Bound_nb == 2:
@@ -1055,7 +1055,7 @@ for i in range(0, len(orders)):
             p = p + ev**iv * et**it * solhom[3]
             rho = rho + ev**iv * et**it * solhom[7]
 
-            if params_dexp.condB == "Thick":
+            if params.condB == "Thick":
                 psi = psi + ev**iv * et**it * (abc[-3]*C.i+abc[-2]*C.j+abc[-1]*C.k )* \
                     ansatz.xreplace({kz: kzpsi[j]})
                 if Bound_nb == 2:
@@ -1075,7 +1075,7 @@ for i in range(0, len(orders)):
 
 
         rescount = simplify(simplify(simplify(rescount))).xreplace({x:1})
-        if params_dexp.test == 1:
+        if params.test == 1:
             print('Matcount', simplify(simplify(simplify(Matcount))))
             print('rescount ::::::::::::::::::::', rescount)
 
@@ -1110,7 +1110,7 @@ for i in range(0, len(orders)):
 
 
     ### TEST ###
-    if params_dexp.test == 1:
+    if params.test == 1:
 
 
         testbound = Bound_nosolve(U, B, psi, psi_2b, {
@@ -1169,7 +1169,7 @@ print("Finish")
 ###   Post Process   ###
 ########################
 
-if params_dexp.pressure_stress == True:
+if params.pressure_stress == True:
     print('Pressure Stress....')
     Bt = simp(realve(B))
     P = simp(((conj(p)+p)/2))
@@ -1179,7 +1179,7 @@ if params_dexp.pressure_stress == True:
     Fptay = taylor_serie((Fp&C.i)-(Fpm&C.i),iv*2,it*2,{})
     ValPress = meanterm(expand((Fptay)))
     print('= ', ValPress.evalf())
-    QFR = params_dexp.QFR
+    QFR = params.QFR
     print([QFR,str(re(ValPress.evalf()))])
 
     # print('test previous method')
@@ -1199,12 +1199,12 @@ if params_dexp.pressure_stress == True:
     # avFp = avFp / (4 * mp.pi**2)
     # print(avFp)
 
-if params_dexp.ohmic_dissipation == True:
+if params.ohmic_dissipation == True:
     print('Ohmic Dissipation....')
     Bt = simp(realve(B))
-    if params_dexp.condB=='Thick':
+    if params.condB=='Thick':
         psit = simp(realve(psi))
-    if params_dexp.condB == 'harm pot':
+    if params.condB == 'harm pot':
         psit = 0*C.i ############ bof
     cuB = curl(Bt)
     cupsi = curl(psit)
@@ -1216,7 +1216,7 @@ if params_dexp.ohmic_dissipation == True:
     Phi_m_T = meanterm(Phi_m_T)
     Diss = simp(((integrate(Phi_T,(z,-oo,0))+integrate(Phi_m_T,(z,0,oo))).xreplace({**dico0, **dico1}))).evalf()
     #print('Dissipation at order',OO[1],OO[0],' = ',Diss.evalf())
-    QFR = params_dexp.QFR
+    QFR = params.QFR
     print([QFR,str(re(Diss.evalf()))])
     # ov = np.arange((order*2)+1)
     # orders = list(comb(ov,repeat=2))
@@ -1235,7 +1235,7 @@ if params_dexp.ohmic_dissipation == True:
 
 
 
-if params_dexp.write_file == True:
+if params.write_file == True:
     topo1 = str((-(f - f0)).xreplace({**dico0, **dico1, **{C.x: Symbol('xx'), C.y: Symbol(
         'yy')}}).xreplace({**dico0, **dico1, **{C.x: Symbol('xx'), C.y: Symbol('yy')}}))
 
@@ -1252,7 +1252,7 @@ if params_dexp.write_file == True:
         files.write(
             str(Matrix([U & C.i, U & C.j, U & C.k, p, B & C.i, B & C.j, B & C.k, rho,psi,psi_2b])))
     if Bound_nb == 1:
-        dic_meta = {'U0x':U0*dico0[u0x],'U0y':U0*dico0[u0y],'B0x':qAl*dico0[b0x],'B0y':qAl*dico0[b0y],'B0z':qAl*dico0[b0z],'Ro' :1/dico1[qRo],'LAT' :LAT,'Al' :1/dico1[qAl],'Fr' :1/dico1[qFr],'Rm' :1/dico1[qRm],'Rmm' :1/dico1[qRmm],'Rmc' :1/dico1[qRmc],'omega':dico1[omega],'f1':dico0[f1],'f2':dico0[f1],'condB':params_dexp.condB,'atmo':params_dexp.atmo}
+        dic_meta = {'U0x':U0*dico0[u0x],'U0y':U0*dico0[u0y],'B0x':qAl*dico0[b0x],'B0y':qAl*dico0[b0y],'B0z':qAl*dico0[b0z],'Ro' :1/dico1[qRo],'LAT' :LAT,'Al' :1/dico1[qAl],'Fr' :1/dico1[qFr],'Rm' :1/dico1[qRm],'Rmm' :1/dico1[qRmm],'Rmc' :1/dico1[qRmc],'omega':dico1[omega],'f1':dico0[f1],'f2':dico0[f1],'condB':params.condB,'atmo':params.atmo}
         for keys in dic_meta:
                 try:
                     dic_meta[keys] = str(S(dic_meta[keys]).evalf(3))
