@@ -11,7 +11,7 @@ import numpy as np
 import mpmath as mp
 import params
 from sympy import symbols, Function, Eq
-from itertools import product as comb
+import itertools
 from sympy.solvers.ode.systems import canonical_odes, linear_ode_to_matrix, linodesolve, linodesolve_type, _classify_linear_system, _linear_ode_solver, matrix_exp_jordan_form
 #
 # from sympy.solvers.ode.subscheck import checkodesol
@@ -557,19 +557,42 @@ if Bound_nb == 2:
         {**dico0, **dico1}).doit().xreplace({**dico0, **dico1})
 
 # Calculus for each order i
-ov = np.arange(order + 1)
-orders = list(comb(ov, repeat=2))
+print('Utest',u0.xreplace({**dico0, **dico1}).coeff(ev))
+test_e = u0.xreplace({**dico0, **dico1}).coeff(ev)
+print(test_e)
+if test_e ==0:
+    ev_test = False
+else:
+    ev_test = True
+comb = np.arange(order+1)
 
-if order == 2:
-    orders = [(0, 0), (0, 1), (1, 0), (1, 1), (0, 2),
-              (2, 0), (1, 2), (2, 1), (2, 2)]
+if ev_test==True:
+    list_1 = comb
+    list_2 = comb
+elif ev_test==False:
+    list_1 = np.zeros(len(comb),dtype=np.int64)
+    list_2 = comb
 
-# orders = [(0, 0), (0, 1), (1, 0)]
+
+comb = np.unique(np.array(list(itertools.product(list_1, list_2))),axis=0)
+aa = (np.sum(comb,axis=1))*10+np.abs(comb[:,1]-comb[:,0])
+idx = aa.argsort()
+orders = comb[idx]
 print(orders)
+if ev_test == True:
+    lim_part = 4
+else:
+    lim_part = 2
+
+# ov = np.arange(order + 1)
+# orders = list(itertools.product(ov, repeat=2))
+# print(orders)
+# ov = np.arange(order + 1)
+# comb = list(comb(ov, repeat=2))
 
 for i in range(0, len(orders)):
-    iv = orders[i][1]
-    it = orders[i][0]
+    iv = orders[i][0]
+    it = orders[i][1]
     print("########################### ORDER", 'E', (iv, it))
     if atmo == 1:
         print("######## Atmospheric conditions ########")
@@ -705,8 +728,10 @@ for i in range(0, len(orders)):
 
                 psi += comat(psi1, ext).xreplace(soB0)
 
-    elif i > 3:
 
+
+    elif i >= lim_part:
+        print('i=',i)
         print("Particular solution")
         eq = makeEquations(U, B, p, rho, iv, it, {**dico0, **dico1})
         var = [Symbol('u' + str(i) + 'x'), Symbol('u' + str(i) + 'y'), Symbol('u' + str(i) + 'z'), Symbol('p' + str(i)),
@@ -879,7 +904,7 @@ for i in range(0, len(orders)):
     #####################################
     ######  Homogeneous solution  #######
     #####################################
-    if i > 1:
+    if (iv,it) != (0,0) and (iv,it) != (1,0):
         print("Homogeneous solution")
 
         # Create the variable as Ubnd = Sum(U,0,n-1) + Upart + U hom

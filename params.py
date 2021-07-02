@@ -28,12 +28,12 @@ f0_2 = Function("f0_2")(x, y, z, t)
 f1_2 = Function("f1_2")(x, y, z, t)
 f2_2 = Function("f2_2")(x, y, z, t)
 
-prec = 80
-order = 2
+prec = 60
+order = 3
 Bound_nb = 1
 mp.mp.dps = prec
 
-condB = "Thick"  # "harm pot", "Thick"
+condB = "harm pot"  # "harm pot", "Thick"
 condU = 'Inviscid'
 
 
@@ -57,24 +57,24 @@ write_file = True
 #        0.9817477 , 1.17809725, 1.37444679, 1.57079633]
 # LAT =
 # LAT = lat_todo[2]#mp.mpf('0.39269908') #In radian
-QFR = 100  # (sys.argv[1])
+QFR = 40  # (sys.argv[1])
 LAT = mp.pi / 2
 # LAT = 0.43973
 # LAT = 4.39736842e-01
 # Imposed field and geometry
 dom = {
     # Zonal flow
-    # u0x:1,
-    # u0y:0,
-    # u0z:0,
+    u0x:1,
+    u0y:0,
+    u0z:0,
     # Nutation forcing
     # u0x:ev*mp.sin(LAT)*(exp(I*omega*t)+exp(-I*omega*t))/2,
     # u0y:ev*(I*(exp(I*omega*t))-I*exp(-I*omega*t))/2,
     # u0z:0,
     # ### Test
-    u0x: ev * (exp(I * omega * t) + exp(-I * omega * t)) / 2,
-    u0y: 0,
-    u0z: 0,
+    # u0x: ev * (exp(I * omega * t) + exp(-I * omega * t)) / 2,
+    # u0y: 0,
+    # u0z: 0,
     # Dipolar Field defined between -pi/2 pi/2
     # b0x :0,
     # b0y:mp.cos(LAT),
