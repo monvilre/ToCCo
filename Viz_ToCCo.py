@@ -20,7 +20,6 @@ x = C.x
 y = C.y
 z = C.z
 
-print(mpf('4'))
 
 def taylor(exp, nv,nt, dic):
     if nv==0 and nt==0:
@@ -148,9 +147,11 @@ def Field(f_field,topo,var,x,y,z,t,ev,et):
         Var_tot[cor] = f_field[3](x[cor],y[cor],z[cor],t,ev,et)
     return(Var_tot)
 
+
 def cross_section_dim(f_field,topo,dic,X,Y,Z,time,zev,zeta,var,varstream,di = 'x',cmap = SCM.tokyo,**kwargs):
-    #scale considering rho = 1e4
-    rhoscale = np.float64(1e4)
+    "plot a cross section of choosen scalar field (var) + streamlines (varstream) "
+
+    rhoscale = np.float64(1e4) #scale considering rho = 1e4
     Xscale = np.float64(dic[Rl]*2890000)
     Vscale = np.float64(7.29e-5*Xscale/dic[qRo])
     Bscale = np.float64(Vscale*np.sqrt(rhoscale*4*np.pi*1e-7)*dic[qAl])
@@ -222,7 +223,20 @@ def cross_section_dim(f_field,topo,dic,X,Y,Z,time,zev,zeta,var,varstream,di = 'x
     cb.set_label('$'+var+'$' + Vscalestr, labelpad=10)
     #plt.contour(MAIN,Z,V,30,colors = 'k')
     if varstream != None:
-        plt.streamplot(MAIN,Z,streamU*1e-3,streamV,color = "k",linewidth = 0.8, density = 1.4,arrowsize = 0.8)
+        stream_X = MAIN[0]
+        stream_Y = Z[:,0]
+        # density = int(30*0.8)
+        # start_X = np.linspace(np.min(stream_X),np.max(stream_X),density)
+        # start_Y = np.linspace(np.min(stream_Y),np.max(stream_Y),density)
+        # SX,SY =  np.meshgrid(start_X, start_Y)
+        # start = np.array([SX.flatten(), SY.flatten()]).T
+
+        import streamplot as custom_stream
+        ax = plt.gca()
+        # custom_stream.streamplot(ax,stream_X,stream_Y,streamU*1e-3,streamV,
+        # color = "k",linewidth = 1,density = 0.793454,arrowsize = 0.8)
+
+        plt.streamplot(stream_X,stream_Y,streamU*1e-3,streamV,start_points = start,color = "k",linewidth = 0.8,density = 4,arrowsize = 0.8)
 
     plt.plot(MAIN[0],topography,'k',linewidth = 3)
 
@@ -230,6 +244,7 @@ def cross_section_dim(f_field,topo,dic,X,Y,Z,time,zev,zeta,var,varstream,di = 'x
     plt.ylabel('$z$ (m)')
     plt.ylim(np.min(Z),np.max(Z))
     plt.xlim(np.min(MAIN),np.max(MAIN))
+
 
 def plot_topo3D(topo,xn,yn,tn,zeta,dic,cmap = SCM.devon):
 
