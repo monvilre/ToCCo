@@ -516,8 +516,8 @@ if Bound_nb == 2:
 
 # Parameters chosen for calculation
 dico0 = params.dom
-# dico1 = params.Buffet2010
-dico1 = params.Glane
+dico1 = params.Buffet2010
+# dico1 = params.Glane
 # dico1 = params.Me
 
 LAT = params.LAT
