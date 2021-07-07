@@ -1386,7 +1386,7 @@ if params.write_file == True:
         'yy')}}).xreplace({**dico0, **dico1, **{C.x: Symbol('xx'), C.y: Symbol('yy')}}))
 
     # Field Saving
-    files = open("sol_anim2", "w+")
+    files = open(params.filename, "w+")
 
     if Bound_nb == 2:
         files = open("sol_topo_2bnd", "w+")

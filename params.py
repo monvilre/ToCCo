@@ -48,6 +48,7 @@ pressure_stress = False
 ohmic_dissipation = False
 
 write_file = False
+filename = "./sol_order3_Glane"
 
 ##########################
 ###     Parameters     ###
