@@ -29,11 +29,11 @@ f1_2 = Function("f1_2")(x, y, z, t)
 f2_2 = Function("f2_2")(x, y, z, t)
 
 prec = 80
-order = 1
+order = 2
 Bound_nb = 1
 mp.mp.dps = prec
 
-condB = "Thick"  # "harm pot", "Thick"
+condB = "harm pot"  # "harm pot", "Thick"
 condU = 'Inviscid'
 
 
@@ -47,7 +47,7 @@ test = 0
 pressure_stress = False
 ohmic_dissipation = False
 
-write_file = True
+write_file = False
 
 ##########################
 ###     Parameters     ###
@@ -64,24 +64,24 @@ LAT = mp.pi / 2
 # Imposed field and geometry
 dom = {
     # Zonal flow
-    # u0x:1,
-    # u0y:0,
-    # u0z:0,
+    u0x:1,
+    u0y:0,
+    u0z:0,
     # Nutation forcing
     # u0x:ev*mp.sin(LAT)*(exp(I*omega*t)+exp(-I*omega*t))/2,
     # u0y:ev*(I*(exp(I*omega*t))-I*exp(-I*omega*t))/2,
     # u0z:0,
     # ### Test
-    u0x: ev * (exp(I * omega * t) + exp(-I * omega * t)) / 2,
-    u0y: 0,
-    u0z: 0,
+    # u0x: ev * (exp(I * omega * t) + exp(-I * omega * t)) / 2,
+    # u0y: 0,
+    # u0z: 0,
     # Dipolar Field defined between -pi/2 pi/2
     # b0x :0,
     # b0y:mp.cos(LAT),
     # b0z: -2*mp.sin(LAT),
-    b0x: mp.sqrt(2)/2,
+    b0x: 0,
     b0y: 0,
-    b0z: mp.sqrt(2)/2,  # linked to the expression of rho0 to solve equation of motion
+    b0z:1,  # linked to the expression of rho0 to solve equation of motion
     rho0: (1 - z),  # Warning alpha removed for devellopment
     f0: z,
     # 1D topo

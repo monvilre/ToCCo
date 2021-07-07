@@ -38,6 +38,7 @@ def mpmathM(A):
     for k in range(A.shape[0]):
         for l in range(A.shape[1]):
             B[k, l] = mp.mpc(str(re(A[k, l])), str(im(A[k, l])))
+    # return(mp.chop(B,tol = 10**(-mp.mp.dps/3)))
     return(B)  # ,tol = 10**(-mp.mp.dps/1.2)))
     # return(B)
 
@@ -516,8 +517,8 @@ if Bound_nb == 2:
 
 # Parameters chosen for calculation
 dico0 = params.dom
-dico1 = params.Buffet2010
-# dico1 = params.Glane
+# dico1 = params.Buffet2010
+dico1 = params.Glane
 # dico1 = params.Me
 
 LAT = params.LAT
@@ -789,33 +790,78 @@ for i in range(0, len(orders)):
             # print('eqp1',eqp,'\n')
             eqp = eqp.xreplace({y: 0})
 
+
+
+            ### compute p ####
+            # pop = solve(eqp,Symbol('p' + str(i)), rational=False)
+            # print(pop)
+            #
+            # var = var.xreplace(pop)
+            # eqp = eqp.xreplace(pop).doit()
+            #
             Mp1, rmep1 = linear_eq_to_matrix(eqp.xreplace(
                 dict(zip(var_keep, varom))).doit(), varom)
             # Mp1 = sympify(mpmathM(Mp1))
             # rmep1 = sympify(mpmathM(rmep1))
             # Mp1 = Mp1.evalf(mp.mp.dps)
             # rmep1 = rmep1.evalf(mp.mp.dps)
+
+            # print('\n','Mp1',Mp1.evalf(3),'\n')
+            # print('\n','rmep1',rmep1.evalf(3),'\n')
+            # print('test Gauss jordan')
+            # soluchap, pa = (Mp1.gauss_jordan_solve(rmep1))
+            # print(soluchap,pa)
+
+            # print('test LU')
+            # soluchap = mp.lu_solve(Mp1, rmep1)
+            # soluchap = Matrix(soluchap)
+            # print(soluchap,pa)
+            # try:
+            #     soluchap, pa = (Mp1.gauss_jordan_solve(rmep1))
+            #     print(pa)
+            # except:
+            #     try:
+            #         print('Gauss pivot failed')
+            #         soluchap = mp.lu_solve(Mp1, rmep1)
+            #         soluchap = Matrix(soluchap)
+            #         pa == Matrix(0, 1, [])
+            #     except:
+            #         try:
+            #             print('Lu failed')
+            #             print('test pinv')
+            # try:
+            #     for vv in varom:
+            #         print('solve'+str(vv),solve(eqp.xreplace(
+            #             dict(zip(var_keep, varom))).doit(),vv))
+            #         print("solving without matrix")
+            # except:
+            #     print("didn't work")
+            #     pass
             try:
                 soluchap, pa = (Mp1.gauss_jordan_solve(rmep1))
                 print(pa)
+                soluchap = sympify(mp.chop(mpmathM(soluchap),tol = 10**(-mp.mp.dps/2)))
+                # print('gauss',soluchap.evalf(3))
+                # print('test gauss',(Mp1*soluchap-rmep1).evalf(3))
+
             except:
-                try:
-                    print('Gauss pivot failed')
-                    soluchap = mp.lu_solve(Mp1, rmep1)
-                    soluchap = Matrix(soluchap)
-                    pa == Matrix(0, 1, [])
-                except:
-                    try:
-                        print('Lu failed')
-                        print('test pinv')
-                        soluchap = Mp1.pinv_solve(rmep1,
-                                              arbitrary_matrix=zeros(shape(Mp1)[0],1))
-                        pa == Matrix(0, 1, [])
-                        print('pinv succeed')
-                    except:
-                        print('pinv fail')
-                        pa = 1
+                # print('Only one solution pinv', simplify(Mp1 * Mp1.pinv() * rmep1) == rmep1)
+                #print('sol without arbitrary matrix', (Mp1.pinv_solve(rmep1)).evalf(3))
+
+                soluchap2 = Mp1.pinv_solve(rmep1,
+                                      arbitrary_matrix=zeros(shape(Mp1)[0],1))
+                soluchap2 = sympify(mp.chop(mpmathM(soluchap2),tol = 10**(-mp.mp.dps/2)))
+                # print('sol pinv',soluchap2.evalf(3))
+                #
+                # print('test pinv',(Mp1*soluchap2-rmep1).evalf(3))
+                pa = Matrix(0, 1, [])
+                print('pinv succeed')
+                soluchap = soluchap2
+            #         except:
+            #             print('pinv fail')
+            #             pa = 1
             # print('soluchap',soluchap,pa)
+
 
             if pa == Matrix(0, 1, []):
                 sop = soluchap * ansatz
@@ -875,9 +921,11 @@ for i in range(0, len(orders)):
                 Beq = sympify(mpmathM(Beq))
                 # part = mp.lu_solve(Aeq,-Beq)
 
-                print(Aeq)
+                print('\n','Aeq',Aeq.evalf(3),'\n')
+                print('\n','Beq',Beq.evalf(3),'\n')
                 try:
                     part, pars = Aeq.gauss_jordan_solve(-Beq)
+                    print(pars)
                     taus_zeroes = {tau: 0 for tau in pars}
                     part_unique = part.xreplace(taus_zeroes)
 
@@ -949,10 +997,10 @@ for i in range(0, len(orders)):
         # Bh = B_ord_0
         # ph = p_ord_0
         # rhoh = rho_ord_0
-        Uh = U
-        Bh = B
-        ph = p
-        rhoh = rho
+        Uh = U+ ev**iv * et**it * Usopart
+        Bh = B+ ev**iv * et**it * Bsopart
+        ph = p+ ev**iv * et**it * psopart
+        rhoh = rho+ ev**iv * et**it * rhosopart
         for ex in expo:
             ansatz = ex * exp(I * kz * z)
 
