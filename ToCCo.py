@@ -204,8 +204,11 @@ def makeEquations(U, B, p, rho, order_v, order_t, dic):
         UgradU = 0 * C.i
     if atmo == 1:
         BgradB = 1e-10 * BgradB
+    if params.condU == 'Inviscid':
+        Eq_NS = diff(U, t) + Cor + UgradU - (-gradient(p) + buoy + BgradB)
+    else:
+        Eq_NS = diff(U, t) + Cor + UgradU - (-gradient(p) + qRe * laplacian(U) + buoy + BgradB)
 
-    Eq_NS = diff(U, t) + Cor + UgradU - (-gradient(p) + buoy + BgradB)
     Eq_vort = diff((Eq_NS & C.j), x) - diff((Eq_NS & C.i), y)
 
     Eq_m = divergence(U)
@@ -317,47 +320,60 @@ def Bound_nosolve(U, B, psi, psi_2b, dic, order_v, order_t):
     nn = n.xreplace(dic).doit()
     condB = params.condB
     condU = params.condU
-
-    if (condB == "harm pot"):
+    BC_list = []
+###### Velocity conditions
+    if condU == 'Stressfree':
         un = U.dot(nn)
         Eq_n1 = surfcond(un, dic).xreplace(dic)
+        eu = strain(U) * nn.to_matrix(C)
+        eu1 = eu.dot(tfox.to_matrix(C))
+        eu2 = eu.dot(tfoy.to_matrix(C))
+        Eq_BU1 = surfcond(eu1, dic)
+        Eq_BU2 = surfcond(eu2, dic)
+        if params.Bound_nb == 1:
+            BC_list += [Eq_n1,Eq_BU1,Eq_BU2]
+        elif params.Bound_nb == 2:
+            nn2 = n2.xreplace(dic).doit()
+            un2 = U.dot(nn2)
+            Eq_n2 = surfcond_2(un2, dic)
+            eu = strain(U) * nn2.to_matrix(C)
+            eu1 = eu.dot(tfox2.to_matrix(C))
+            eu2 = eu.dot(tfoy2.to_matrix(C))
+            Eq2_BU1 = surfcond2(eu1, dic)
+            Eq2_BU2 = surfcond2(eu2, dic)
+            BC_list += [Eq_n2,Eq2_BU1,Eq2_BU2]
+    elif condU == 'Inviscid':
+        un = U.dot(nn)
+        Eq_n1 = surfcond(un, dic).xreplace(dic)
+        BC_list += [Eq_n1]
+        if params.Bound_nb == 2:
+            nn2 = n2.xreplace(dic).doit()
+            un2 = U.dot(nn2)
+            Eq_n2 = surfcond_2(un2, dic)
+            BC_list += [Eq_n2]
+###### Magnetic conditions
+    if (condB == "harm pot"):
         bb = B + gradient(psi)
         Eq_b = surfcond(bb, dic)
         Eq_bx = Eq_b & C.i
         Eq_by = Eq_b & C.j
         Eq_bz = Eq_b & C.k
+        BC_list += [Eq_bx,Eq_by,Eq_bz]
         if params.Bound_nb == 2:
             bb2 = B + gradient(psi_2b)
             Eq_b2 = surfcond_2(bb2, dic)
             Eq_b2x = Eq_b2 & C.i
             Eq_b2y = Eq_b2 & C.j
             Eq_b2z = Eq_b2 & C.k
-            nn2 = n2.xreplace(dic).doit()
-            un2 = U.dot(nn2)
-            Eq_n2 = surfcond_2(un2, dic)
-            if order_v == 'no':
-                TEq = [Eq_n1, Eq_n2, Eq_bx, Eq_by,
-                       Eq_bz, Eq_b2x, Eq_b2y, Eq_b2z]
-            else:
-                TEq = [(taylor(eq, order_v, order_t, dic)) for eq in [Eq_n1, Eq_n2,
-                                                                      Eq_bx, Eq_by, Eq_bz, Eq_b2x, Eq_b2y, Eq_b2z]]
-        elif params.Bound_nb == 1:
-            if order_v == 'no':
-                TEq = [Eq_n1, Eq_bx, Eq_by, Eq_bz]
-            else:
-                TEq = [taylor(eq, order_v, order_t, dic)
-                       for eq in [Eq_n1, Eq_bx, Eq_by, Eq_bz]]
+            BC_list += [Eq_b2x,Eq_b2y,Eq_b2z]
 
-    if (condB == "Thick"):
-        un = U.dot(nn)
-        Eq_n1 = surfcond(un, dic).xreplace(dic)
+    elif condB == "Thick":
         conservation_B = surfcond(B - psi, dic)
         if buf == 1:
             conservation_E = qRm * diff(B, z) - qRmm * diff(psi, z) + qAl * U
         else:
             conservation_E = nn.cross(
                 qRm * curl(B) - qRmm * curl(psi) - (U.cross(B)))
-
         consE = surfcond(conservation_E, dic)
         Eq_Ex = consE & C.i
         Eq_Ey = consE & C.j
@@ -365,38 +381,27 @@ def Bound_nosolve(U, B, psi, psi_2b, dic, order_v, order_t):
         Eq_bx = conservation_B & C.i
         Eq_by = conservation_B & C.j
         Eq_bz = conservation_B & C.k
-
+        BC_list += [Eq_bx, Eq_by, Eq_bz, Eq_Ex, Eq_Ey]
         if params.Bound_nb == 2:
-            nn2 = n2.xreplace(dic).doit()
-            un2 = U.dot(nn2)
-            Eq_n2 = surfcond_2(un2, dic)
             conservation_B_2 = surfcond_2(B - psi_2b, dic)
             conservation_E_2 = nn2.cross(
                 qRm * curl(B) - qRmc * curl(psi_2b) - (U.cross(B)))
             consE_2 = surfcond_2(conservation_E_2, dic)
-
             Eq_E2x = consE_2 & C.i
             Eq_E2y = consE_2 & C.j
             Eq_E2z = consE_2 & C.k
             Eq_b2x = conservation_B_2 & C.i
             Eq_b2y = conservation_B_2 & C.j
             Eq_b2z = conservation_B_2 & C.k
+            BC_list += [Eq_b2x, Eq_b2y, Eq_b2z, Eq_E2x, Eq_E2y]
 
-            if order_v == 'no':
-                TEq = [Eq_n1, Eq_n2, Eq_bx, Eq_by, Eq_bz, Eq_b2x,
-                       Eq_b2y, Eq_b2z, Eq_Ex, Eq_Ey, Eq_E2x, Eq_E2y]
-            else:
-                TEq = [(taylor(eq, order_v, order_t, dic)) for eq in [Eq_n1, Eq_n2,
-                                                                      Eq_bx, Eq_by, Eq_bz, Eq_b2x, Eq_b2y, Eq_b2z, Eq_Ex, Eq_Ey, Eq_E2x, Eq_E2y]]
-        elif params.Bound_nb == 1:
 
-            if order_v == 'no':
-                TEq = [Eq_n1, Eq_by, Eq_bx, Eq_bz, Eq_Ex, Eq_Ey]
-            else:
-                TEq = [taylor(eq, order_v, order_t, dic)
-                       for eq in [Eq_n1, Eq_by, Eq_bx, Eq_bz, Eq_Ex, Eq_Ey]]
-
-    # TEq = [expand(x).evalf(mp.mp.dps) for x in TEq]
+    if order_v == 'no':
+        TEq = BC_list
+    else:
+        TEq = [taylor(eq, order_v, order_t, dic)
+               for eq in BC_list]
+    print('NUmber of BC: ',len(TEq))
     TEq = Matrix([powsimp(expand(tex.xreplace(dic)))
                   for tex in TEq])
     return(TEq)
@@ -484,9 +489,9 @@ nz = (nfo & C.k)
 
 if params.dom[f1] != 0:
     tfox = (C.i) + ((ny / nx) * C.j) + (-((nx**2 + ny**2) / (nx * nz)) * C.k)
-    tfox = tfox / sqrt((tfox & C.i)**2 + (tfox & C.j)**2 + (tfox & C.k)**2)
+    tfox = tfox.normalize()
     tfoy = (-(ny / nx) * C.i) + (C.j) + (0 * C.k)
-    tfoy = tfoy / sqrt((tfoy & C.i)**2 + (tfoy & C.j)**2 + (tfoy & C.k)**2)
+    tfoy = tfoy.normalize()
 else:
     tfox = (C.i)
     tfoy = (C.j)
@@ -849,24 +854,27 @@ for i in range(0, len(orders)):
             # print('sol pinv',soluchap2.evalf(3))
             # # print(soluchap2.evalf(2))
             # print('test pinv',simplify((Mp1*soluchap2-rmep1)).evalf(3))
-
-            # soluchap2 = Mp1.pinv_solve(
-            #     rmep1, arbitrary_matrix=zeros(shape(Mp1)[0], 1))
-            # soluchap2 = sympify(
-            #     mp.chop(mpmathM(soluchap2), tol=10**(-mp.mp.dps / 2)))
-            # print('sol pinv arbitrary matrix 0', soluchap2.evalf(3))
-
+            try:
+                soluchap, pa = (Mp1.gauss_jordan_solve(rmep1))
+                print('gauss succeed')
+            except:
+                soluchap = Mp1.pinv_solve(
+                    rmep1, arbitrary_matrix=zeros(shape(Mp1)[0], 1))
+                soluchap = sympify(
+                    mp.chop(mpmathM(soluchap), tol=10**(-mp.mp.dps / 2)))
+                print('sol pinv arbitrary matrix 0', soluchap.evalf(3))
+                print('pinv succeed')
             # soluchap2 = Mp1.pinv_solve(rmep1, arbitrary_matrix=ones(shape(Mp1)[0],1)*1e5)
             # soluchap2 = sympify(mp.chop(mpmathM(soluchap2),tol = 10**(-mp.mp.dps/2)))
             # print('sol pinv arbitrary matrix 1e5',soluchap2.evalf(3))
             # #
-            soluchap2 = Mp1.pinv_solve(rmep1, arbitrary_matrix=Matrix([0.5,1e3,-10,1e-3,5e5,9,8e2,3]))
-            soluchap2 = sympify(mp.chop(mpmathM(soluchap2),tol = 10**(-mp.mp.dps/2)))
-            print('sol pinv arbitrary matrix random',soluchap2.evalf(3))
+            #
+            # soluchap2 = Mp1.pinv_solve(rmep1, arbitrary_matrix=Matrix([0.5,1e3,-10,1e-3,5e5,9,8e2,3]))
+            # soluchap2 = sympify(mp.chop(mpmathM(soluchap2),tol = 10**(-mp.mp.dps/2)))
+            # print('sol pinv arbitrary matrix random',soluchap2.evalf(3))
 
             pa = Matrix(0, 1, [])
-            print('pinv succeed')
-            soluchap = soluchap2
+
             #         except:
             #             print('pinv fail')
             #             pa = 1
@@ -1264,7 +1272,7 @@ for i in range(0, len(orders)):
         # print('\n rho : ',simp(rho.evalf(3)),'\n')
         # print('\n psi : ',simp(psi.evalf(3)),'\n')
         #
-    test_res = True
+    test_res = False
     if test_res == True:
         testbound = Bound_nosolve(U, B, psi, psi_2b, {
             **dico0, **dico1}, 'no', 'no')

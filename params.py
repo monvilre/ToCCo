@@ -28,13 +28,13 @@ f0_2 = Function("f0_2")(x, y, z, t)
 f1_2 = Function("f1_2")(x, y, z, t)
 f2_2 = Function("f2_2")(x, y, z, t)
 
-prec = 80
+prec = 140
 order = 2
 Bound_nb = 1
 mp.mp.dps = prec
 
 condB = "harm pot"  # "harm pot", "Thick"
-condU = 'Inviscid'
+condU = 'Stressfree' # Inviscid , Stressfree
 
 
 buf = 0
@@ -48,7 +48,7 @@ pressure_stress = False
 ohmic_dissipation = False
 
 write_file = True
-filename = "./output/sol_order2_Glane_arb1e5"
+filename = "./output/sol_order1_Glane_stressfree"
 
 ##########################
 ###     Parameters     ###
@@ -121,7 +121,7 @@ dom1 = {
 
 Glane = {
     U0: 1,
-    qRe: 0,
+    qRe: mp.mpf('1.26e-07'),
     omega: mp.mpf('182614.49999999997'),
     qRo: mp.mpf('2314.2857142857147'),
     Rl: mp.mpf('0.0054923930356456305'),
