@@ -11,15 +11,23 @@ from sympy.vector import CoordSys3D,matrix_to_vector,curl,gradient,divergence,De
 import matplotlib.pyplot as plt
 from matplotlib import animation, rc
 from cmcrameri import cm as SCM
+import pickle
 
 
 """ import for sympy """
-C = CoordSys3D('C')
 U0,omega,qRe,chi,qRo,BOx,qAl,BOy,BOz,qRm,qRmm,qFr,Ri,zeta,Dist,e,t,p0,xx,yy,CUx,CUy,CUz,CBx,CBy,CBz,et,ev,tau0,qRmc,Rl = symbols("U0,omega,qRe,chi,qRo,BOx,qAl,BOy,BOz,qRm,qRmm,qFr,Ri,zeta,Dist,e,t,p0,xx,yy,CUx,CUy,CUz,CBx,CBy,CBz,et,ev,tau0,qRmc,Rl")
+C = CoordSys3D('C')
 x = C.x
 y = C.y
 z = C.z
-
+x.is_real
+y.is_real
+z.is_real
+x._assumptions['real'] = True
+y._assumptions['real'] = True
+z._assumptions['real'] = True
+t = Symbol('t', real=True)
+et,ev = symbols('et,ev')
 
 def taylor(exp, nv,nt, dic):
     if nv==0 and nt==0:
@@ -36,19 +44,15 @@ def taylor(exp, nv,nt, dic):
     return (expt)
 
 def import_data(filename):
-    fil = open(filename,"r")
-    fi = fil.read()
-    fil.close()
-    ind = fi.find("Matrix")
-    Mat = fi[ind:]
-    solfull = eval(Mat)
-    dico = fi[:ind]
-    dic = eval(dico)
-    meta = dic['meta']
-    return(solfull,dic)
+    with open(filename, 'rb') as f:
+        data = pickle.load(f)
+    dic = data['meta']
+    solfull = data['Expr']
+    topo = data['topo']
+    return(solfull,dic,topo)
 
 def func_field(solfull,dic):
-    condB = dic['meta']['condB']
+    condB = dic['condB']
     sux = solfull[0]
     suy = solfull[1]
     suz = solfull[2]
@@ -101,59 +105,57 @@ def func_field(solfull,dic):
     TsP = taylor(solfull[3],0,1,{})*et +taylor(solfull[3],1,1,{})*et*ev
     TffP = lambdify([x,y,z,t,ev,et],re(TsP))
 
-    topo = lambdify([xx,yy,t,et],re(sympify(dic['f1'])))
-
     f_field = [ffux,ffuy,ffuz,TffP,ffbx,ffby,ffbz,ffrho,ffpsix,ffpsiy,ffpsiz,ffjx,ffjy,ffjz,ffjmx,ffjmy,ffjmz]
-    return(f_field,topo)
+    return(f_field)
 
-def Field(f_field,topo,var,x,y,z,t,ev,et):
-    Var_tot = np.zeros(np.shape(x))
-    mant = (z-topo(x,y,t,et) >=0)
-    cor = (z-topo(x,y,t,et) <=0)
+def Field(f_field,topo,var,X,Y,Z,T,Ev,Et):
+    Var_tot = np.zeros(np.shape(X))
+    mant = (Z-topo(X,Y,T,Et) >=0)
+    cor = (Z-topo(X,Y,T,Et) <=0)
 
     if var == 'U_x':
         Var_tot[mant] = np.nan
-        Var_tot[cor] = f_field[0](x[cor],y[cor],z[cor],t,ev,et)
+        Var_tot[cor] = f_field[0](X[cor],Y[cor],Z[cor],T,Ev,Et)
     elif var == 'U_y':
         Var_tot[mant] = np.nan
-        Var_tot[cor] = f_field[1](x[cor],y[cor],z[cor],t,ev,et)
+        Var_tot[cor] = f_field[1](X[cor],Y[cor],Z[cor],T,Ev,Et)
     elif var == 'U_z':
         Var_tot[mant] = np.nan
-        Var_tot[cor] = f_field[2](x[cor],y[cor],z[cor],t,ev,et)
+        Var_tot[cor] = f_field[2](X[cor],Y[cor],Z[cor],T,Ev,Et)
     elif var == 'B_x':
-        Var_tot[mant] = f_field[8](x[mant],y[mant],z[mant],t,ev,et)
-        Var_tot[cor] = f_field[4](x[cor],y[cor],z[cor],t,ev,et)
+        Var_tot[mant] = f_field[8](X[mant],Y[mant],Z[mant],T,Ev,Et)
+        Var_tot[cor] = f_field[4](X[cor],Y[cor],Z[cor],T,Ev,Et)
     elif var == 'B_y':
-        Var_tot[mant] = f_field[9](x[mant],y[mant],z[mant],t,ev,et)
-        Var_tot[cor] = f_field[5](x[cor],y[cor],z[cor],t,ev,et)
+        Var_tot[mant] = f_field[9](X[mant],Y[mant],Z[mant],T,Ev,Et)
+        Var_tot[cor] = f_field[5](X[cor],Y[cor],Z[cor],T,Ev,Et)
     elif var == 'B_z':
-        Var_tot[mant] = f_field[10](x[mant],y[mant],z[mant],t,ev,et)
-        Var_tot[cor] = f_field[6](x[cor],y[cor],z[cor],t,ev,et)
+        Var_tot[mant] = f_field[10](X[mant],Y[mant],Z[mant],T,Ev,Et)
+        Var_tot[cor] = f_field[6](X[cor],Y[cor],Z[cor],T,Ev,Et)
     elif var == 'J_x':
-        Var_tot[mant] = f_field[14](x[mant],y[mant],z[mant],t,ev,et)
-        Var_tot[cor] = f_field[11](x[cor],y[cor],z[cor],t,ev,et)
+        Var_tot[mant] = f_field[14](X[mant],Y[mant],Z[mant],T,Ev,Et)
+        Var_tot[cor] = f_field[11](X[cor],Y[cor],Z[cor],T,Ev,Et)
     elif var == 'J_y':
-        Var_tot[mant] = f_field[15](x[mant],y[mant],z[mant],t,ev,et)
-        Var_tot[cor] = f_field[12](x[cor],y[cor],z[cor],t,ev,et)
+        Var_tot[mant] = f_field[15](X[mant],Y[mant],Z[mant],T,Ev,Et)
+        Var_tot[cor] = f_field[12](X[cor],Y[cor],Z[cor],T,Ev,Et)
     elif var == 'J_z':
-        Var_tot[mant] = f_field[16](x[mant],y[mant],z[mant],t,ev,et)
-        Var_tot[cor] = f_field[13](x[cor],y[cor],z[cor],t,ev,et)
+        Var_tot[mant] = f_field[16](X[mant],Y[mant],Z[mant],T,Ev,Et)
+        Var_tot[cor] = f_field[13](X[cor],Y[cor],Z[cor],T,Ev,Et)
     elif var == 'rho':
         Var_tot[mant] = np.nan
-        Var_tot[cor] = f_field[7](x[cor],y[cor],z[cor],t,ev,et)
+        Var_tot[cor] = f_field[7](X[cor],Y[cor],Z[cor],T,Ev,Et)
     elif var == 'P':
         Var_tot[mant] = np.nan
-        Var_tot[cor] = f_field[3](x[cor],y[cor],z[cor],t,ev,et)
+        Var_tot[cor] = f_field[3](X[cor],Y[cor],Z[cor],T,Ev,Et)
     return(Var_tot)
 
 
 def cross_section_dim(f_field,topo,dic,X,Y,Z,time,zev,zeta,var,varstream,di = 'x',cmap = SCM.tokyo,**kwargs):
     "plot a cross section of choosen scalar field (var) + streamlines (varstream) "
-
+    topo = lambdify([x,y,t,et],re(topo))
     rhoscale = np.float64(1e4) #scale considering rho = 1e4
-    Xscale = np.float64(dic[Rl]*2890000)
-    Vscale = np.float64(7.29e-5*Xscale/dic[qRo])
-    Bscale = np.float64(Vscale*np.sqrt(rhoscale*4*np.pi*1e-7)*dic[qAl])
+    Xscale = np.float64(dic['Rl']*2890000)
+    Vscale = np.float64(7.29e-5*Xscale*dic['Ro'])
+    Bscale = np.float64(Vscale*np.sqrt(rhoscale*4*np.pi*1e-7)/dic['Al'])
     Jscale = np.float64(Bscale/(Xscale*4*np.pi*1e-7))
     Pscale = np.float64(Vscale**2*rhoscale)
 
@@ -246,8 +248,8 @@ def cross_section_dim(f_field,topo,dic,X,Y,Z,time,zev,zeta,var,varstream,di = 'x
 
 
 def plot_topo3D(topo,xn,yn,tn,zeta,dic,cmap = SCM.devon):
-
-    Xscale = np.float64(dic[Rl]*2890000)
+    topo = lambdify([x,y,t,et],re(topo))
+    Xscale = np.float64(dic['Rl']*2890000)
 
     X,Y = np.meshgrid(xn,yn)
 
@@ -271,7 +273,8 @@ def plot_topo3D(topo,xn,yn,tn,zeta,dic,cmap = SCM.devon):
 def plot_topo_cut(topo,xn,tn,zeta,dic,cmap = SCM.devon):
     from matplotlib.path import Path
     from matplotlib.patches import PathPatch
-    Xscale = np.float64(dic[Rl]*2890000)
+    topo = lambdify([x,y,t,et],re(topo))
+    Xscale = np.float64(dic['Rl']*2890000)
     fig = plt.figure(figsize = (12,5))
 
     zn= np.real(topo(xn,0,tn,zeta))
