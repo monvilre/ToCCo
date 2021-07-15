@@ -70,7 +70,6 @@ def func_field(solfull,dic):
     ffby = lambdify([x,y,z,t,ev,et],re(sby))
     ffbz = lambdify([x,y,z,t,ev,et],re(sbz))
     ffrho = lambdify([x,y,z,t,ev,et],re(srho))
-
     ffjx = lambdify([x,y,z,t,ev,et],re(sJ&C.i))
     ffjy = lambdify([x,y,z,t,ev,et],re(sJ&C.j))
     ffjz = lambdify([x,y,z,t,ev,et],re(sJ&C.k))
@@ -91,13 +90,13 @@ def func_field(solfull,dic):
     ffjmy = lambdify([x,y,z,t,ev,et],re(sJm&C.j))
     ffjmz = lambdify([x,y,z,t,ev,et],re(sJm&C.k))
 
-    # taylorized V
-    Tsux = taylor(solfull[0],1,1,{})*ev*et
-    Tsuy = taylor(solfull[1],1,1,{})*ev*et
-    Tsuz = taylor(solfull[2],1,1,{})*ev*et
-    Tffux = lambdify([x,y,z,t,ev,et],re(Tsux))
-    Tffuy = lambdify([x,y,z,t,ev,et],re(Tsuy))
-    Tffuz = lambdify([x,y,z,t,ev,et],re(Tsuz))
+    # # taylorized V
+    # Tsux = taylor(solfull[0],1,1,{})*ev*et
+    # Tsuy = taylor(solfull[1],1,1,{})*ev*et
+    # Tsuz = taylor(solfull[2],1,1,{})*ev*et
+    # Tffux = lambdify([x,y,z,t,ev,et],re(Tsux))
+    # Tffuy = lambdify([x,y,z,t,ev,et],re(Tsuy))
+    # Tffuz = lambdify([x,y,z,t,ev,et],re(Tsuz))
 
     TsP = taylor(solfull[3],0,1,{})*et +taylor(solfull[3],1,1,{})*et*ev
     TffP = lambdify([x,y,z,t,ev,et],re(TsP))
@@ -231,12 +230,12 @@ def cross_section_dim(f_field,topo,dic,X,Y,Z,time,zev,zeta,var,varstream,di = 'x
         # SX,SY =  np.meshgrid(start_X, start_Y)
         # start = np.array([SX.flatten(), SY.flatten()]).T
 
-        import streamplot as custom_stream
-        ax = plt.gca()
+        # import streamplot as custom_stream
+        # ax = plt.gca()
         # custom_stream.streamplot(ax,stream_X,stream_Y,streamU*1e-3,streamV,
         # color = "k",linewidth = 1,density = 0.793454,arrowsize = 0.8)
 
-        plt.streamplot(stream_X,stream_Y,streamU*1e-3,streamV,start_points = start,color = "k",linewidth = 0.8,density = 4,arrowsize = 0.8)
+        plt.streamplot(stream_X,stream_Y,streamU*1e-3,streamV,color = "k",linewidth = 0.8,density = 1.4,arrowsize = 0.8)
 
     plt.plot(MAIN[0],topography,'k',linewidth = 3)
 

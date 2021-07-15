@@ -29,7 +29,7 @@ f1_2 = Function("f1_2")(x, y, z, t)
 f2_2 = Function("f2_2")(x, y, z, t)
 
 prec = 80
-order = 2
+order = 1
 Bound_nb = 1
 mp.mp.dps = prec
 
@@ -47,8 +47,8 @@ test = 0
 pressure_stress = False
 ohmic_dissipation = False
 
-write_file = False
-filename = "./sol_order3_Glane"
+write_file = True
+filename = "./sol_order1_Glane"
 
 ##########################
 ###     Parameters     ###
