@@ -104,14 +104,18 @@ print(f)
 delf = gradient(f)
 n = delf.normalize()
 
-Bt = simp(realve(B))
-P = simp(((conj(p) + p) / 2))
-nn = simp(realve(n))
-Fp = surfcond(simp((P * nn)), {})
-Fpm = surfcond(simp((((Bt.dot(Bt)) / 2) * nn)), {})
+Bt = realve(B)
+P = ((conj(p) + p) / 2)
+nn = (realve(n))&C.i
+Fp = surfcond((P * nn), {})
+Fpm = surfcond((((Bt.dot(Bt) / 2) * nn)), {})
 
-Fptay = taylor_serie((Fp & C.i) - (Fpm & C.i),np.max(orders[:,0]) * 2, np.max(orders[:,1])*2,{})
-ValPress = meanterm(expand((Fptay)))
+print('surfcond done')
+
+Fptay = taylor_serie(Fp,np.max(orders[:,0]) * 2, np.max(orders[:,1])*2,{})
+print()
+Fpmtay = taylor_serie(Fpm,np.max(orders[:,0]) * 2, np.max(orders[:,1])*2,{})
+ValPress = meanterm(expand((Fptay-Fpmtay)))
 
 
 rhoscale = np.float64(1e4) #scale considering rho = 1e4

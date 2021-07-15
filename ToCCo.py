@@ -850,19 +850,19 @@ for i in range(0, len(orders)):
             # # print(soluchap2.evalf(2))
             # print('test pinv',simplify((Mp1*soluchap2-rmep1)).evalf(3))
 
-            soluchap2 = Mp1.pinv_solve(
-                rmep1, arbitrary_matrix=zeros(shape(Mp1)[0], 1))
-            soluchap2 = sympify(
-                mp.chop(mpmathM(soluchap2), tol=10**(-mp.mp.dps / 2)))
-            print('sol pinv arbitrary matrix 0', soluchap2.evalf(3))
+            # soluchap2 = Mp1.pinv_solve(
+            #     rmep1, arbitrary_matrix=zeros(shape(Mp1)[0], 1))
+            # soluchap2 = sympify(
+            #     mp.chop(mpmathM(soluchap2), tol=10**(-mp.mp.dps / 2)))
+            # print('sol pinv arbitrary matrix 0', soluchap2.evalf(3))
 
             # soluchap2 = Mp1.pinv_solve(rmep1, arbitrary_matrix=ones(shape(Mp1)[0],1)*1e5)
             # soluchap2 = sympify(mp.chop(mpmathM(soluchap2),tol = 10**(-mp.mp.dps/2)))
             # print('sol pinv arbitrary matrix 1e5',soluchap2.evalf(3))
             # #
-            # soluchap2 = Mp1.pinv_solve(rmep1, arbitrary_matrix=Matrix([0.5,1e3,-10,1e-3,5e5,9,8e2,3]))
-            # soluchap2 = sympify(mp.chop(mpmathM(soluchap2),tol = 10**(-mp.mp.dps/2)))
-            # print('sol pinv arbitrary matrix random',soluchap2.evalf(3))
+            soluchap2 = Mp1.pinv_solve(rmep1, arbitrary_matrix=Matrix([0.5,1e3,-10,1e-3,5e5,9,8e2,3]))
+            soluchap2 = sympify(mp.chop(mpmathM(soluchap2),tol = 10**(-mp.mp.dps/2)))
+            print('sol pinv arbitrary matrix random',soluchap2.evalf(3))
 
             pa = Matrix(0, 1, [])
             print('pinv succeed')
@@ -876,85 +876,87 @@ for i in range(0, len(orders)):
                 sop = soluchap * ansatz
                 print('steady solution ok')
             else:
-                print('need time dependance')
-
-                # ##### Chop small values
-                (A1, Aeq), Beq = linear_ode_to_matrix(eqp, var_keep, t, 1)
-                # A1 = sympify(mpmathM(A1))
-                # Aeq = sympify(mpmathM(Aeq))
-                # print(Aeq)
-                # Beq = sympify(mpmathM(Beq))
-                # print(Beq)
-                Aeq_k = Aeq
-                Beq_k = Beq
-                eqp = (A1 * Matrix(var_keep)).diff(t) - \
-                    Aeq * Matrix(var_keep) - Beq
-                #
-                # ######
-
-                eq_not = Matrix(np.array(eqp)[list(np.sum(A1, axis=1) == 0)])
-                # bug of sympy solve
-                eq_not = eq_not.row_insert(0, Matrix([100 * Symbol('ttu')]))
-                eq_not = eq_not.row_insert(0, Matrix([100 * Symbol('ttu')]))
-                ###############
-                s_not = solve(eq_not, rational=False)[0]
-                var = var.xreplace(s_not)
-                eqp = eqp.xreplace(s_not).doit()
-                ### compute p ####
-                pop = solve(eqp, Function('p' + str(i))(t), rational=False)
-                var = var.xreplace(pop)
-                eqp = eqp.xreplace(pop).doit()
-                (A1, Aeq), Beq = linear_ode_to_matrix(eqp, var_keep, t, 1)
-
-                eqs = Matrix(np.array(eqp)[list(np.sum(A1, axis=1) == 1)])
-                var_t = Matrix(np.array(var_keep)[
-                               list(np.sum(A1, axis=0) == 1)])
-
-                (A1, Aeq), Beq = linear_ode_to_matrix(eqs, var_t, t, 1)
-
-                AM = mpmathM(Aeq)
-                BM = mpmathM(Beq)
-                E, ER = mp.eig(AM)
-                E = E
-                ER = ER
-
-                hom = zeros(len(E), 1)
-
-                for kk in range(len(E)):
-
-                    hom = hom + Symbol('C' + str(kk)) * \
-                        Matrix((ER[:, kk])) * exp(E[kk] * t)
-                # try:
-
-                Aeq = sympify(mpmathM(Aeq))
-                Beq = sympify(mpmathM(Beq))
-                # part = mp.lu_solve(Aeq,-Beq)
-
-                print('\n', 'Aeq', Aeq.evalf(3), '\n')
-                print('\n', 'Beq', Beq.evalf(3), '\n')
-                try:
-                    part, pars = Aeq.gauss_jordan_solve(-Beq)
-                    print(pars)
-                    taus_zeroes = {tau: 0 for tau in pars}
-                    part_unique = part.xreplace(taus_zeroes)
-
-                except:
-                    print('Gauss pivot failed')
-                    print('test pinv')
-                    part = Aeq.pinv_solve(-Beq,
-                                          arbitrary_matrix=zeros(shape(Aeq)[0], 1))
-                    part_unique = part
-
-                # part,pars = soluchap,pa
-                    # part,pars = Aeq.gauss_jordan_solve(-Beq)
-                # except:
-                #     print("raté")
-
-                sol = hom + part_unique
-                ics = solve(sol.xreplace({t: 0}), rational=False)
-                soluchap = sol.xreplace(ics)
-                soluchap = var.xreplace(dict(zip(var_t, soluchap)))
-                sop = soluchap * ansatz
+                raise(ValueError)
+            # else:
+            #     print('need time dependance')
+            #
+            #     # ##### Chop small values
+            #     (A1, Aeq), Beq = linear_ode_to_matrix(eqp, var_keep, t, 1)
+            #     # A1 = sympify(mpmathM(A1))
+            #     # Aeq = sympify(mpmathM(Aeq))
+            #     # print(Aeq)
+            #     # Beq = sympify(mpmathM(Beq))
+            #     # print(Beq)
+            #     Aeq_k = Aeq
+            #     Beq_k = Beq
+            #     eqp = (A1 * Matrix(var_keep)).diff(t) - \
+            #         Aeq * Matrix(var_keep) - Beq
+            #     #
+            #     # ######
+            #
+            #     eq_not = Matrix(np.array(eqp)[list(np.sum(A1, axis=1) == 0)])
+            #     # bug of sympy solve
+            #     eq_not = eq_not.row_insert(0, Matrix([100 * Symbol('ttu')]))
+            #     eq_not = eq_not.row_insert(0, Matrix([100 * Symbol('ttu')]))
+            #     ###############
+            #     s_not = solve(eq_not, rational=False)[0]
+            #     var = var.xreplace(s_not)
+            #     eqp = eqp.xreplace(s_not).doit()
+            #     ### compute p ####
+            #     pop = solve(eqp, Function('p' + str(i))(t), rational=False)
+            #     var = var.xreplace(pop)
+            #     eqp = eqp.xreplace(pop).doit()
+            #     (A1, Aeq), Beq = linear_ode_to_matrix(eqp, var_keep, t, 1)
+            #
+            #     eqs = Matrix(np.array(eqp)[list(np.sum(A1, axis=1) == 1)])
+            #     var_t = Matrix(np.array(var_keep)[
+            #                    list(np.sum(A1, axis=0) == 1)])
+            #
+            #     (A1, Aeq), Beq = linear_ode_to_matrix(eqs, var_t, t, 1)
+            #
+            #     AM = mpmathM(Aeq)
+            #     BM = mpmathM(Beq)
+            #     E, ER = mp.eig(AM)
+            #     E = E
+            #     ER = ER
+            #
+            #     hom = zeros(len(E), 1)
+            #
+            #     for kk in range(len(E)):
+            #
+            #         hom = hom + Symbol('C' + str(kk)) * \
+            #             Matrix((ER[:, kk])) * exp(E[kk] * t)
+            #     # try:
+            #
+            #     Aeq = sympify(mpmathM(Aeq))
+            #     Beq = sympify(mpmathM(Beq))
+            #     # part = mp.lu_solve(Aeq,-Beq)
+            #
+            #     print('\n', 'Aeq', Aeq.evalf(3), '\n')
+            #     print('\n', 'Beq', Beq.evalf(3), '\n')
+            #     try:
+            #         part, pars = Aeq.gauss_jordan_solve(-Beq)
+            #         print(pars)
+            #         taus_zeroes = {tau: 0 for tau in pars}
+            #         part_unique = part.xreplace(taus_zeroes)
+            #
+            #     except:
+            #         print('Gauss pivot failed')
+            #         print('test pinv')
+            #         part = Aeq.pinv_solve(-Beq,
+            #                               arbitrary_matrix=zeros(shape(Aeq)[0], 1))
+            #         part_unique = part
+            #
+            #     # part,pars = soluchap,pa
+            #         # part,pars = Aeq.gauss_jordan_solve(-Beq)
+            #     # except:
+            #     #     print("raté")
+            #
+            #     sol = hom + part_unique
+            #     ics = solve(sol.xreplace({t: 0}), rational=False)
+            #     soluchap = sol.xreplace(ics)
+            #     soluchap = var.xreplace(dict(zip(var_t, soluchap)))
+            #     sop = soluchap * ansatz
             so_part = so_part + sop
 
     #####################################
