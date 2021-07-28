@@ -28,13 +28,13 @@ f0_2 = Function("f0_2")(x, y, z, t)
 f1_2 = Function("f1_2")(x, y, z, t)
 f2_2 = Function("f2_2")(x, y, z, t)
 
-prec = 140
+prec = 30
 order = 2
 Bound_nb = 1
 mp.mp.dps = prec
 
 condB = "harm pot"  # "harm pot", "Thick"
-condU = 'Stressfree' # Inviscid , Stressfree
+condU = 'Inviscid' # Inviscid , Stressfree
 
 
 buf = 0
@@ -47,121 +47,144 @@ test = 0
 pressure_stress = False
 ohmic_dissipation = False
 
-write_file = True
-filename = "./output/sol_order1_Glane_stressfree"
+write_file = False
+filename = "./output/sol_order1_Glane_2vel"
 
 ##########################
 ###     Parameters     ###
 ##########################
 
-# lat_todo = [1e-2, 0.19634954, 0.39269908, 0.58904862, 0.78539816,
-#        0.9817477 , 1.17809725, 1.37444679, 1.57079633]
-# LAT =
-# LAT = lat_todo[2]#mp.mpf('0.39269908') #In radian
 QFR = 40  # (sys.argv[1])
 LAT = mp.pi / 2
-# LAT = 0.43973
-# LAT = 4.39736842e-01
-# Imposed field and geometry
-dom = {
-    # Zonal flow
+
+Glane  = {
     u0x:1,
+    #u0x:1 + ev * (exp(I * omega * t) + exp(-I * omega * t)) / 2,
     u0y:0,
     u0z:0,
-    # Nutation forcing
-    # u0x:ev*mp.sin(LAT)*(exp(I*omega*t)+exp(-I*omega*t))/2,
-    # u0y:ev*(I*(exp(I*omega*t))-I*exp(-I*omega*t))/2,
-    # u0z:0,
-    # ### Test
-    # u0x: ev * (exp(I * omega * t) + exp(-I * omega * t)) / 2,
-    # u0y: 0,
-    # u0z: 0,
-    # Dipolar Field defined between -pi/2 pi/2
-    # b0x :0,
-    # b0y:mp.cos(LAT),
-    # b0z: -2*mp.sin(LAT),
-    b0x: 0,
-    b0y: 0,
-    b0z:1,  # linked to the expression of rho0 to solve equation of motion
-    rho0: (1 - z),  # Warning alpha removed for devellopment
+    b0x:0,
+    b0y:0,
+    b0z:1,
+    rho0: (1 - z),
     f0: z,
-    # 1D topo
     f1: -(exp(I * (x)) + exp(-I * (x))) / 2,
-    # 1D topo respiration
-    # f1 :-(exp(I*(x))+exp(-I*(x))+exp(I*(t))+exp(-I*(t))+exp(I*(omega*t))+exp(-I*(omega*t)))/2,
-    # 1D topo 2wave
-    # f1 :-(exp(I*(x))+exp(-I*(x))+1/6*exp(6*I*(x))+1/6*exp(-6*I*(x)))/(2+2*(1/6)),
-    # f1 :-(exp(I*(x))+exp(-I*(x))+1/6*exp(6*I*(x))+1/6*exp(-6*I*(x))+exp(I*(y))+exp(-I*(y))+1/6*exp(6*I*(y))+1/6*exp(-6*I*(y)))/(4+4*(1/6)),
-    # +exp(I*(omega*t))+exp(-I*(omega*t)))/2,
-    # Egg box
-    # f1: -(exp(I*(x+y)/(mp.sqrt(2)))+exp(-I*(x+y)/(mp.sqrt(2)))+exp(I*(x-y)/(mp.sqrt(2)))+exp(-I*(x-y)/(mp.sqrt(2))))/4,
-    # f1: -(exp(I*(x+y))+exp(-I*(x+y))+exp(I*(x-y))+exp(-I*(x-y)))/4,
-    # Egg box tilted
-    # f1: -(exp(I*x)+exp(I*y)+exp(-I*x)+exp(-I*y))/4,
-    f2: 0,  # -(exp(10*I*x)+exp(-10*I*x))/2,
-    # f1:0,
+    f2: 0,
     f0_2: z,
     f1_2: -(exp(2 * I * x) + exp(-2 * I * x)) / 2,
-}
-
-dom1 = {
     U0: 1,
-    qRe: 0,
-
-    qRo: 1 / (mp.mpf('1.93e-4')),
-    chi: 30 / (1 / (mp.mpf('1.93e-4'))),
-    BOx: 0,
-    BOy: 0,
-    qAl: 1 / (mp.mpf('2.24e-2')),
-    BOz: 1,
-    qRm: 1 / (mp.mpf('1.25')),
-    qRmm: 1 / (mp.mpf('0.25')),
-    qFr: mp.mpf('1e3'),
-    Dist: 1}
-
-Glane = {
-    U0: 1,
-    qRe: mp.mpf('1.26e-07'),
+    qRe: mp.mpf('1e-3'),
     omega: mp.mpf('182614.49999999997'),
     qRo: mp.mpf('2314.2857142857147'),
     Rl: mp.mpf('0.0054923930356456305'),
-    # BOx : 0,
     qRmc: mp.nan,
-    qAl: mp.mpf('11.627553482998906'),  # 1/(mp.mpf('2.24e-2')),
-    # BOz :1,
-    qRm: mp.mpf('0.10080000000000001'),  # 1/(mp.mpf('1.25')),
-    qRmm: mp.mpf('10.0080000000000001'),  # 1/(mp.mpf('1.25')),
-    qFr: mp.mpf('46285.71428571429'),  # mp.mpf('46285.71428571429'),
-    # qFr : mp.mpf(str(QFR)),#mp.mpf('46285.71428571429'),
-    Dist: 1}
+    qAl: mp.mpf('11.627553482998906'),
+    qRm: mp.mpf('0.10080000000000001'),
+    qRmm: mp.mpf('10.0080000000000001'),
+    qFr: mp.mpf('46285.71428571429'),
+    Dist: 1
+}
 
-Buffet2010 = {
-    U0: 1,
-    qRe: 0,
-    omega: mp.mpf('182614.49999999994'),
+DICO = Glane
 
-    qRo: (mp.mpf('182249.99999999994')),
-    Rl: mp.mpf('0.03460207612456747'),
-    qAl: mp.mpf('111.50775725954817'),
-    qRm: mp.mpf('0.39788735772973843'),
-    qRmm: mp.mpf('198.9436788648692'),
-    qRmc: mp.mpf('80'),
-    qFr: mp.mpf('224999999.99999994'),
-    Dist: 1e-2}
-
-Me = {
-    U0: 1,
-    qRe: 0,
-    omega: mp.mpf('182614.49999999994'),
-
-    qRo: (mp.mpf('182249.99999999994')),
-    Rl: mp.mpf('0.03460207612456747'),
-    qAl: mp.mpf('111.50775725954817'),
-    qRm: mp.mpf('0.39788735772973843'),
-    qRmm: mp.mpf('198.9436788648692'),
-    qRmc: mp.mpf('80'),
-    # qFr : mp.mpf(QFR),
-    Dist: 1e-2}
+# dom = {
+#     # Zonal flow
+#     u0x:1,
+#     u0y:0,
+#     u0z:0,
+#     # Nutation forcing
+#     #u0x:ev*mp.sin(LAT)*(exp(I*omega*t)+exp(-I*omega*t))/2,
+#     # u0y:ev*(I*(exp(I*omega*t))-I*exp(-I*omega*t))/2,
+#     # u0z:0,
+#     # ### Test
+#     # u0x: ev * (exp(I * omega * t) + exp(-I * omega * t)) / 2,
+#     # u0y: 0,
+#     # u0z: 0,
+#     # Dipolar Field defined between -pi/2 pi/2
+#     # b0x :0,
+#     # b0y:mp.cos(LAT),
+#     # b0z: -2*mp.sin(LAT),
+#     b0x: 0,
+#     b0y: 0,
+#     b0z:1,  # linked to the expression of rho0 to solve equation of motion
+#     rho0: (1 - z),  # Warning alpha removed for devellopment
+#     f0: z,
+#     # 1D topo
+#     f1: -(exp(I * (x)) + exp(-I * (x))) / 2,
+#     # 1D topo respiration
+#     # f1 :-(exp(I*(x))+exp(-I*(x))+exp(I*(t))+exp(-I*(t))+exp(I*(omega*t))+exp(-I*(omega*t)))/2,
+#     # 1D topo 2wave
+#     # f1 :-(exp(I*(x))+exp(-I*(x))+1/6*exp(6*I*(x))+1/6*exp(-6*I*(x)))/(2+2*(1/6)),
+#     # f1 :-(exp(I*(x))+exp(-I*(x))+1/6*exp(6*I*(x))+1/6*exp(-6*I*(x))+exp(I*(y))+exp(-I*(y))+1/6*exp(6*I*(y))+1/6*exp(-6*I*(y)))/(4+4*(1/6)),
+#     # +exp(I*(omega*t))+exp(-I*(omega*t)))/2,
+#     # Egg box
+#     # f1: -(exp(I*(x+y)/(mp.sqrt(2)))+exp(-I*(x+y)/(mp.sqrt(2)))+exp(I*(x-y)/(mp.sqrt(2)))+exp(-I*(x-y)/(mp.sqrt(2))))/4,
+#     # f1: -(exp(I*(x+y))+exp(-I*(x+y))+exp(I*(x-y))+exp(-I*(x-y)))/4,
+#     # Egg box tilted
+#     # f1: -(exp(I*x)+exp(I*y)+exp(-I*x)+exp(-I*y))/4,
+#     f2: 0,  # -(exp(10*I*x)+exp(-10*I*x))/2,
+#     # f1:0,
+#     f0_2: z,
+#     f1_2: -(exp(2 * I * x) + exp(-2 * I * x)) / 2,
+# }
+#
+# dom1 = {
+#     U0: 1,
+#     qRe: 0,
+#
+#     qRo: 1 / (mp.mpf('1.93e-4')),
+#     chi: 30 / (1 / (mp.mpf('1.93e-4'))),
+#     BOx: 0,
+#     BOy: 0,
+#     qAl: 1 / (mp.mpf('2.24e-2')),
+#     BOz: 1,
+#     qRm: 1 / (mp.mpf('1.25')),
+#     qRmm: 1 / (mp.mpf('0.25')),
+#     qFr: mp.mpf('1e3'),
+#     Dist: 1}
+#
+# Glane = {
+#     U0: 1,
+#     qRe: mp.mpf('1.26e-07'),
+#     omega: mp.mpf('182614.49999999997'),
+#     qRo: mp.mpf('2314.2857142857147'),
+#     Rl: mp.mpf('0.0054923930356456305'),
+#     # BOx : 0,
+#     qRmc: mp.nan,
+#     qAl: mp.mpf('11.627553482998906'),  # 1/(mp.mpf('2.24e-2')),
+#     # BOz :1,
+#     qRm: mp.mpf('0.10080000000000001'),  # 1/(mp.mpf('1.25')),
+#     qRmm: mp.mpf('10.0080000000000001'),  # 1/(mp.mpf('1.25')),
+#     qFr: mp.mpf('46285.71428571429'),  # mp.mpf('46285.71428571429'),
+#     # qFr : mp.mpf(str(QFR)),#mp.mpf('46285.71428571429'),
+#     Dist: 1}
+#
+# Buffet2010 = {
+#     U0: 1,
+#     qRe: 0,
+#     omega: mp.mpf('182614.49999999994'),
+#
+#     qRo: (mp.mpf('182249.99999999994')),
+#     Rl: mp.mpf('0.03460207612456747'),
+#     qAl: mp.mpf('111.50775725954817'),
+#     qRm: mp.mpf('0.39788735772973843'),
+#     qRmm: mp.mpf('198.9436788648692'),
+#     qRmc: mp.mpf('80'),
+#     qFr: mp.mpf('224999999.99999994'),
+#     Dist: 1e-2}
+#
+# Me = {
+#     U0: 1,
+#     qRe: 0,
+#     omega: mp.mpf('182614.49999999994'),
+#
+#     qRo: (mp.mpf('182249.99999999994')),
+#     Rl: mp.mpf('0.03460207612456747'),
+#     qAl: mp.mpf('111.50775725954817'),
+#     qRm: mp.mpf('0.39788735772973843'),
+#     qRmm: mp.mpf('198.9436788648692'),
+#     qRmc: mp.mpf('80'),
+#     # qFr : mp.mpf(QFR),
+#     Dist: 1e-2}
 
 
 #     zeta:(h_b/L_b)}

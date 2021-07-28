@@ -51,105 +51,77 @@ def import_data(filename):
     topo = data['topo']
     return(solfull,dic,topo)
 
-def func_field(solfull,dic):
-    condB = dic['condB']
-    sux = solfull[0]
-    suy = solfull[1]
-    suz = solfull[2]
-    sp = solfull[3]
-    sbx = solfull[4]
-    sby =solfull[5]
-    sbz = solfull[6]
-    srho = solfull[7]
-    spsi  = solfull[8]
 
-    curlV = (curl(sux*C.i+suy*C.j))&C.k
-    sJ = curl(sbx*C.i+sby*C.j+sbz*C.k)
+def lambda_func(input):
+    return(lambdify([x,y,z,t,ev,et],re(input)))
+#
+# def func_field(solfull,dic):
+#     condB = dic['condB']
+#     sux = solfull[0]
+#     suy = solfull[1]
+#     suz = solfull[2]
+#     sp = solfull[3]
+#     sbx = solfull[4]
+#     sby =solfull[5]
+#     sbz = solfull[6]
+#     srho = solfull[7]
+#     spsi  = solfull[8]
+#
+#     curlV = (curl(sux*C.i+suy*C.j))&C.k
+#     sJ = curl(sbx*C.i+sby*C.j+sbz*C.k)
+#
+#     ffux = lambdify([x,y,z,t,ev,et],re(sux))
+#     ffuy = lambdify([x,y,z,t,ev,et],re(suy))
+#     ffuz = lambdify([x,y,z,t,ev,et],re(suz))
+#     ffp =  lambdify([x,y,z,t,ev,et],re(sp))
+#     ffbx = lambdify([x,y,z,t,ev,et],re(sbx))
+#     ffby = lambdify([x,y,z,t,ev,et],re(sby))
+#     ffbz = lambdify([x,y,z,t,ev,et],re(sbz))
+#     ffrho = lambdify([x,y,z,t,ev,et],re(srho))
+#     ffjx = lambdify([x,y,z,t,ev,et],re(sJ&C.i))
+#     ffjy = lambdify([x,y,z,t,ev,et],re(sJ&C.j))
+#     ffjz = lambdify([x,y,z,t,ev,et],re(sJ&C.k))
+#
+#     if condB == 'Thick':
+#         sBm = spsi
+#     elif condB == 'harm pot':
+#         sBm = -gradient(spsi)
+#     else:
+#         print('Invalid magnetic BC')
+#
+#     ffpsix = lambdify([x,y,z,t,ev,et],re(sBm&C.i))
+#     ffpsiy = lambdify([x,y,z,t,ev,et],re(sBm&C.j))
+#     ffpsiz = lambdify([x,y,z,t,ev,et],re(sBm&C.k))
+#
+#     sJm = curl(sBm)
+#     ffjmx = lambdify([x,y,z,t,ev,et],re(sJm&C.i))
+#     ffjmy = lambdify([x,y,z,t,ev,et],re(sJm&C.j))
+#     ffjmz = lambdify([x,y,z,t,ev,et],re(sJm&C.k))
+#
+#     # # taylorized V
+#     # Tsux = taylor(solfull[0],1,1,{})*ev*et
+#     # Tsuy = taylor(solfull[1],1,1,{})*ev*et
+#     # Tsuz = taylor(solfull[2],1,1,{})*ev*et
+#     # Tffux = lambdify([x,y,z,t,ev,et],re(Tsux))
+#     # Tffuy = lambdify([x,y,z,t,ev,et],re(Tsuy))
+#     # Tffuz = lambdify([x,y,z,t,ev,et],re(Tsuz))
+#
+#     TsP = taylor(solfull[3],0,1,{})*et +taylor(solfull[3],1,1,{})*et*ev
+#     TffP = lambdify([x,y,z,t,ev,et],re(TsP))
+#
+#     f_field = [ffux,ffuy,ffuz,TffP,ffbx,ffby,ffbz,ffrho,ffpsix,ffpsiy,ffpsiz,ffjx,ffjy,ffjz,ffjmx,ffjmy,ffjmz]
+#     return(f_field)
 
-    ffux = lambdify([x,y,z,t,ev,et],re(sux))
-    ffuy = lambdify([x,y,z,t,ev,et],re(suy))
-    ffuz =lambdify([x,y,z,t,ev,et],re(suz))
-    ffp = lambdify([x,y,z,t,ev,et],re(sp))
-    ffbx = lambdify([x,y,z,t,ev,et],re(sbx))
-    ffby = lambdify([x,y,z,t,ev,et],re(sby))
-    ffbz = lambdify([x,y,z,t,ev,et],re(sbz))
-    ffrho = lambdify([x,y,z,t,ev,et],re(srho))
-    ffjx = lambdify([x,y,z,t,ev,et],re(sJ&C.i))
-    ffjy = lambdify([x,y,z,t,ev,et],re(sJ&C.j))
-    ffjz = lambdify([x,y,z,t,ev,et],re(sJ&C.k))
-
-    if condB == 'Thick':
-        sBm = spsi
-    elif condB == 'harm pot':
-        sBm = -gradient(spsi)
-    else:
-        print('Invalid magnetic BC')
-
-    ffpsix = lambdify([x,y,z,t,ev,et],re(sBm&C.i))
-    ffpsiy = lambdify([x,y,z,t,ev,et],re(sBm&C.j))
-    ffpsiz = lambdify([x,y,z,t,ev,et],re(sBm&C.k))
-
-    sJm = curl(sBm)
-    ffjmx = lambdify([x,y,z,t,ev,et],re(sJm&C.i))
-    ffjmy = lambdify([x,y,z,t,ev,et],re(sJm&C.j))
-    ffjmz = lambdify([x,y,z,t,ev,et],re(sJm&C.k))
-
-    # # taylorized V
-    # Tsux = taylor(solfull[0],1,1,{})*ev*et
-    # Tsuy = taylor(solfull[1],1,1,{})*ev*et
-    # Tsuz = taylor(solfull[2],1,1,{})*ev*et
-    # Tffux = lambdify([x,y,z,t,ev,et],re(Tsux))
-    # Tffuy = lambdify([x,y,z,t,ev,et],re(Tsuy))
-    # Tffuz = lambdify([x,y,z,t,ev,et],re(Tsuz))
-
-    TsP = taylor(solfull[3],0,1,{})*et +taylor(solfull[3],1,1,{})*et*ev
-    TffP = lambdify([x,y,z,t,ev,et],re(TsP))
-
-    f_field = [ffux,ffuy,ffuz,TffP,ffbx,ffby,ffbz,ffrho,ffpsix,ffpsiy,ffpsiz,ffjx,ffjy,ffjz,ffjmx,ffjmy,ffjmz]
-    return(f_field)
-
-def Field(f_field,topo,var,X,Y,Z,T,Ev,Et):
+def Field(f_field,topo,lfunc_mantle,lfunc_core,X,Y,Z,T,Ev,Et):
     Var_tot = np.zeros(np.shape(X))
     mant = (Z-topo(X,Y,T,Et) >=0)
     cor = (Z-topo(X,Y,T,Et) <=0)
-
-    if var == 'U_x':
-        Var_tot[mant] = np.nan
-        Var_tot[cor] = f_field[0](X[cor],Y[cor],Z[cor],T,Ev,Et)
-    elif var == 'U_y':
-        Var_tot[mant] = np.nan
-        Var_tot[cor] = f_field[1](X[cor],Y[cor],Z[cor],T,Ev,Et)
-    elif var == 'U_z':
-        Var_tot[mant] = np.nan
-        Var_tot[cor] = f_field[2](X[cor],Y[cor],Z[cor],T,Ev,Et)
-    elif var == 'B_x':
-        Var_tot[mant] = f_field[8](X[mant],Y[mant],Z[mant],T,Ev,Et)
-        Var_tot[cor] = f_field[4](X[cor],Y[cor],Z[cor],T,Ev,Et)
-    elif var == 'B_y':
-        Var_tot[mant] = f_field[9](X[mant],Y[mant],Z[mant],T,Ev,Et)
-        Var_tot[cor] = f_field[5](X[cor],Y[cor],Z[cor],T,Ev,Et)
-    elif var == 'B_z':
-        Var_tot[mant] = f_field[10](X[mant],Y[mant],Z[mant],T,Ev,Et)
-        Var_tot[cor] = f_field[6](X[cor],Y[cor],Z[cor],T,Ev,Et)
-    elif var == 'J_x':
-        Var_tot[mant] = f_field[14](X[mant],Y[mant],Z[mant],T,Ev,Et)
-        Var_tot[cor] = f_field[11](X[cor],Y[cor],Z[cor],T,Ev,Et)
-    elif var == 'J_y':
-        Var_tot[mant] = f_field[15](X[mant],Y[mant],Z[mant],T,Ev,Et)
-        Var_tot[cor] = f_field[12](X[cor],Y[cor],Z[cor],T,Ev,Et)
-    elif var == 'J_z':
-        Var_tot[mant] = f_field[16](X[mant],Y[mant],Z[mant],T,Ev,Et)
-        Var_tot[cor] = f_field[13](X[cor],Y[cor],Z[cor],T,Ev,Et)
-    elif var == 'rho':
-        Var_tot[mant] = np.nan
-        Var_tot[cor] = f_field[7](X[cor],Y[cor],Z[cor],T,Ev,Et)
-    elif var == 'P':
-        Var_tot[mant] = np.nan
-        Var_tot[cor] = f_field[3](X[cor],Y[cor],Z[cor],T,Ev,Et)
+        Var_tot[mant] = lfunc_mantle(X[mant],Y[mant],Z[mant],T,Ev,Et)
+        Var_tot[cor] = lfunc_core(X[cor],Y[cor],Z[cor],T,Ev,Et)
     return(Var_tot)
 
 
-def cross_section_dim(f_field,topo,dic,X,Y,Z,time,zev,zeta,var,varstream,di = 'x',cmap = SCM.tokyo,**kwargs):
+def cross_section_dim(f_field,topo,dic,X,Y,Z,time,zev,zeta,lfunc_mantle,lfunc_core,funcstream_mantle,funcstream_core,di = 'x',cmap = SCM.tokyo,**kwargs):
     "plot a cross section of choosen scalar field (var) + streamlines (varstream) "
     topo = lambdify([x,y,t,et],re(topo))
     rhoscale = np.float64(1e4) #scale considering rho = 1e4
@@ -159,43 +131,43 @@ def cross_section_dim(f_field,topo,dic,X,Y,Z,time,zev,zeta,var,varstream,di = 'x
     Jscale = np.float64(Bscale/(Xscale*4*np.pi*1e-7))
     Pscale = np.float64(Vscale**2*rhoscale)
 
-    V = Field(f_field,topo,var,X,Y,Z,time,zev,zeta)
-    if varstream == 'U':
-        if di == 'x':
-            streamU = Field(f_field,topo,'U_x',X,Y,Z,time,zev,zeta)*Vscale
-        if di == 'y':
-            streamU = Field(f_field,topo,'U_y',X,Y,Z,time,zev,zeta)*Vscale
-        streamV = Field(f_field,topo,'U_z',X,Y,Z,time,zev,zeta)*Vscale
-    elif varstream == 'B':
-        if di == 'x':
-            streamU = Field(f_field,topo,'B_x',X,Y,Z,time,zev,zeta)*Bscale
-        if di == 'y':
-            streamU = Field(f_field,topo,'B_y',X,Y,Z,time,zev,zeta)*Bscale
-        streamV = Field(f_field,topo,'B_z',X,Y,Z,time,zev,zeta)*Bscale
-    elif varstream == 'J':
-        if di == 'x':
-            streamU = Field(f_field,topo,'J_x',X,Y,Z,time,zev,zeta)*Jscale
-        if di == 'y':
-            streamU = Field(f_field,topo,'J_y',X,Y,Z,time,zev,zeta)*Jscale
-        streamV = Field(f_field,topo,'J_z',X,Y,Z,time,zev,zeta)*Jscale
+    V = Field(f_field,topo,lfunc_mantle,lfunc_core,X,Y,Z,time,zev,zeta)
+    # if varstream == 'U':
+        # if di == 'x':
+        #     streamU = Field(f_field,topo,funcstream_mantle,funcstream_core,X,Y,Z,time,zev,zeta)*Vscale
+        # if di == 'y':
+    streamU = Field(f_field,topo,funcstream_mantle[0],funcstream_core[0],X,Y,Z,time,zev,zeta)*Vscale
+    streamV = Field(f_field,topo,funcstream_mantle[1],funcstream_core[1],X,Y,Z,time,zev,zeta)*Vscale
+    # elif varstream == 'B':
+    #     if di == 'x':
+    #         streamU = Field(f_field,topo,'B_x',X,Y,Z,time,zev,zeta)*Bscale
+    #     if di == 'y':
+    #         streamU = Field(f_field,topo,'B_y',X,Y,Z,time,zev,zeta)*Bscale
+    #     streamV = Field(f_field,topo,'B_z',X,Y,Z,time,zev,zeta)*Bscale
+    # elif varstream == 'J':
+    #     if di == 'x':
+    #         streamU = Field(f_field,topo,'J_x',X,Y,Z,time,zev,zeta)*Jscale
+    #     if di == 'y':
+    #         streamU = Field(f_field,topo,'J_y',X,Y,Z,time,zev,zeta)*Jscale
+    #     streamV = Field(f_field,topo,'J_z',X,Y,Z,time,zev,zeta)*Jscale
 
-    if var == 'U_x' or var == 'U_y' or var == 'U_z':
-        V = V*Vscale
-        Vscalestr = ' (m/s)'
-    elif var == 'B_x' or var == 'B_y' or var == 'B_z':
-        V = V*Bscale*1e6
-        Vscalestr = ' ($\mu$T)'
-    elif var == 'J_x' or var == 'J_y' or var == 'J_z':
-        V = V*Jscale
-        Vscalestr = ' (A/m$^{-2}$)'
-    elif var == 'rho':
-        V = V*rhoscale
-        Vscalestr = ' (kg/m$^3$)'
-    elif var == 'P':
-        V = V*Pscale
-        Vscalestr = ' (Pa)'
-    else:
-        print('invalid variable for contourf plot')
+    # if var == 'U_x' or var == 'U_y' or var == 'U_z':
+    #     V = V*Vscale
+    #     Vscalestr = ' (m/s)'
+    # elif var == 'B_x' or var == 'B_y' or var == 'B_z':
+    #     V = V*Bscale*1e6
+    #     Vscalestr = ' ($\mu$T)'
+    # elif var == 'J_x' or var == 'J_y' or var == 'J_z':
+    #     V = V*Jscale
+    #     Vscalestr = ' (A/m$^{-2}$)'
+    # elif var == 'rho':
+    #     V = V*rhoscale
+    #     Vscalestr = ' (kg/m$^3$)'
+    # elif var == 'P':
+    #     V = V*Pscale
+    #     Vscalestr = ' (Pa)'
+    # else:
+    #     print('invalid variable for contourf plot')
 
 
     topography = topo(X[0],Y[0],time,zeta)*Xscale
@@ -238,6 +210,7 @@ def cross_section_dim(f_field,topo,dic,X,Y,Z,time,zev,zeta,var,varstream,di = 'x
         # color = "k",linewidth = 1,density = 0.793454,arrowsize = 0.8)
 
         plt.streamplot(stream_X,stream_Y,streamU*1e-3,streamV,color = "k",linewidth = 0.8,density = 1.4,arrowsize = 0.8)
+
 
     plt.plot(MAIN[0],topography,'k',linewidth = 3)
 

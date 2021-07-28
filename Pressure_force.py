@@ -1,4 +1,4 @@
-import Viz_ToCCo as Viz
+# import Viz_ToCCo as Viz
 import sys
 from sympy import *
 from sympy.vector import CoordSys3D, curl, gradient, divergence, Del, Divergence, Gradient, laplacian, Curl, matrix_to_vector
@@ -111,27 +111,29 @@ Fp = surfcond((P * nn), {})
 Fpm = surfcond((((Bt.dot(Bt) / 2) * nn)), {})
 
 print('surfcond done')
-
-Fptay = taylor_serie(Fp,np.max(orders[:,0]) * 2, np.max(orders[:,1])*2,{})
+print(orders[:,0][:,0])
+print(orders[:,0][:,1])
+Fptay = taylor_serie(Fp,np.max(orders[:,0][:,0]) * 2, np.max(orders[:,0][:,1])*2,{})
 print()
-Fpmtay = taylor_serie(Fpm,np.max(orders[:,0]) * 2, np.max(orders[:,1])*2,{})
+Fpmtay = taylor_serie(Fpm,np.max(orders[:,0][:,0]) * 2, np.max(orders[:,0][:,1])*2,{})
 ValPress = meanterm(expand((Fptay-Fpmtay)))
 
 
 rhoscale = np.float64(1e4) #scale considering rho = 1e4
 Xscale = np.float64(meta['Rl']*2890000)
+print(Xscale)
 Vscale = np.float64(7.29e-5*Xscale*meta['Ro'])
 
 print('\n')
 print("Pressure torque : ", ValPress)
 ValPress_D = ValPress.xreplace({et:Symbol('h')/Xscale,ev:1})*rhoscale*Vscale**2
-print("Dimensional Pressure torque : ", ValPress_D," N/m^2")
+# print("Dimensional Pressure torque : ", ValPress_D," N/m^2")
 
-try:
-    zeta_value = np.float64(sys.argv[2])
-    print('\n ####################################### \n')
-    print("Pressure torque for "+str(np.round(zeta_value,5))+" zeta :", re(ValPress.xreplace({et:zeta_value})))
-    print("Dimensional Pressure torque for a topo of "+str(np.round(zeta_value*Xscale,5))+" m :", re(ValPress_D.xreplace({Symbol('h'):zeta_value*Xscale}))," N/m^2")
-except:
-    pass
+# try:
+zeta_value = np.float64(sys.argv[2])
+print('\n ####################################### \n')
+print("Pressure torque for "+str(np.round(zeta_value,5))+" zeta :", re(ValPress.xreplace({et:zeta_value})))
+print("Dimensional Pressure torque for a topo of "+str(np.round(zeta_value*Xscale,5))+" m :", re(ValPress_D.xreplace({Symbol('h'):zeta_value*Xscale}))," N/m^2")
+# except:
+#     pass
 #Dimensional diss

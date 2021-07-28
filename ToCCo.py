@@ -52,16 +52,6 @@ def factorial(n):
     else:
         return n * factorial(n - 1)
 
-#
-# def printn(expr, n=3):
-#     try:
-#         expU = (expr).find(exp)
-#         logexpU = [exp(N(log(h).expand(), n)) for h in expU]
-#         print(N((expr).xreplace(dict(zip(expU, logexpU))), n))
-#     except:
-#         print(expr)
-
-
 def findexp(Ma):
     def coe(x): return list(x.find(exp))
     expo = (Ma.applyfunc(coe))
@@ -136,7 +126,7 @@ def realve(vect):
     return(ve)
 
 
-def null_space(A):
+def null_space(A,ansatz):
     u, s, vh = mp.svd_c(A)
     # /4 is the most important tolerance parameters for the number of kz
     for inc in reversed(range(8)):
@@ -189,6 +179,7 @@ def taylor_serie(exp, nvmax, ntmax, dic):
 
 
 def makeEquations(U, B, p, rho, order_v, order_t, dic):
+
     Eq_rho = diff(rho, t) + (U.dot(gradient(rho)))
     if buf == 1:
         Eq_rho = diff(rho, t) + (U.dot(diff(rho0, z) * C.k))
@@ -205,9 +196,11 @@ def makeEquations(U, B, p, rho, order_v, order_t, dic):
     if atmo == 1:
         BgradB = 1e-10 * BgradB
     if params.condU == 'Inviscid':
+
         Eq_NS = diff(U, t) + Cor + UgradU - (-gradient(p) + buoy + BgradB)
     else:
-        Eq_NS = diff(U, t) + Cor + UgradU - (-gradient(p) + qRe * laplacian(U) + buoy + BgradB)
+        Eq_NS = diff(U, t) + Cor + UgradU - (-gradient(p) +
+                                             qRe * laplacian(U) + buoy + BgradB)
 
     Eq_vort = diff((Eq_NS & C.j), x) - diff((Eq_NS & C.i), y)
 
@@ -222,14 +215,15 @@ def makeEquations(U, B, p, rho, order_v, order_t, dic):
     eq = zeros(9, 1)
 
     for ii, j in enumerate([Eq_NS & C.i, Eq_NS & C.j, Eq_vort, Eq_NS & C.k, Eq_b & C.i, Eq_b & C.j, Eq_b & C.k, Eq_m, Eq_rho]):
-        eq[ii] = taylor(j, order_v, order_t, dic)
+        if order_v == 'no':
+            eq[ii] = j
+        else:
+            eq[ii] = taylor(j, order_v, order_t, dic)
     eq = Matrix([powsimp(expand(eqx).xreplace(dic)) for eqx in eq])
-
-    print("Eq OK")
     return(eq)
 
 
-def eigen(M, dic):
+def eigen(M,ansatz, dic):
     M1 = M.xreplace(dic)
     # M1 = N(M1,mp.mp.dps * 10)
     # M2 = np.array(M1)
@@ -240,7 +234,6 @@ def eigen(M, dic):
     detp = Poly(det, kz).xreplace(dic)
     co = detp.all_coeffs()
     co = [N(k, mp.mp.dps * 10) for k in co]
-
     maxsteps = 3000
     extraprec = 5000
     co = [mp.mpmathify(coco) for coco in co]
@@ -265,7 +258,7 @@ def eigen(M, dic):
         M2 = mpmathM(M1.xreplace({kz: solr[i]}))
         global solrnow
         solrnow = solr[i]
-        eigen1[i] = null_space(M2)
+        eigen1[i] = null_space(M2,ansatz)
 
     existence = [not mp.isnan(sum(eigen1[i])) for i in range(len(solr))]
     # for soso in solr:
@@ -294,7 +287,7 @@ def eigen(M, dic):
     return(solr1, eigen1, M1)
 
 
-def veigen(eig, sol):
+def veigen(eig, sol,ansatz):
     veig = 0
     for s in range(len(sol)):
         veig = veig + Symbol('C' + str(s)) * \
@@ -321,7 +314,7 @@ def Bound_nosolve(U, B, psi, psi_2b, dic, order_v, order_t):
     condB = params.condB
     condU = params.condU
     BC_list = []
-###### Velocity conditions
+# Velocity conditions
     if condU == 'Stressfree':
         un = U.dot(nn)
         Eq_n1 = surfcond(un, dic).xreplace(dic)
@@ -331,7 +324,18 @@ def Bound_nosolve(U, B, psi, psi_2b, dic, order_v, order_t):
         Eq_BU1 = surfcond(eu1, dic)
         Eq_BU2 = surfcond(eu2, dic)
         if params.Bound_nb == 1:
-            BC_list += [Eq_n1,Eq_BU1,Eq_BU2]
+
+
+            # print('my eq = ',[Eq_BU1, Eq_BU2])
+            book =  (strain(U) * nn.to_matrix(C)).cross(nn.to_matrix(C))
+            # print(' book say', book[0])
+            # print('\n')
+            # print(' book say', book[1])
+            # print('\n')
+            # print(' book say', book[2])
+            # print([surfcond(book[0], dic), surfcond(book[1], dic),surfcond(book[2], dic)])
+
+            BC_list += [Eq_n1, surfcond(book[0], dic), surfcond(book[1], dic),surfcond(book[2], dic)]
         elif params.Bound_nb == 2:
             nn2 = n2.xreplace(dic).doit()
             un2 = U.dot(nn2)
@@ -341,7 +345,7 @@ def Bound_nosolve(U, B, psi, psi_2b, dic, order_v, order_t):
             eu2 = eu.dot(tfoy2.to_matrix(C))
             Eq2_BU1 = surfcond2(eu1, dic)
             Eq2_BU2 = surfcond2(eu2, dic)
-            BC_list += [Eq_n2,Eq2_BU1,Eq2_BU2]
+            BC_list += [Eq_n2, Eq2_BU1, Eq2_BU2]
     elif condU == 'Inviscid':
         un = U.dot(nn)
         Eq_n1 = surfcond(un, dic).xreplace(dic)
@@ -351,21 +355,21 @@ def Bound_nosolve(U, B, psi, psi_2b, dic, order_v, order_t):
             un2 = U.dot(nn2)
             Eq_n2 = surfcond_2(un2, dic)
             BC_list += [Eq_n2]
-###### Magnetic conditions
+# Magnetic conditions
     if (condB == "harm pot"):
         bb = B + gradient(psi)
         Eq_b = surfcond(bb, dic)
         Eq_bx = Eq_b & C.i
         Eq_by = Eq_b & C.j
         Eq_bz = Eq_b & C.k
-        BC_list += [Eq_bx,Eq_by,Eq_bz]
+        BC_list += [Eq_bx, Eq_by, Eq_bz]
         if params.Bound_nb == 2:
             bb2 = B + gradient(psi_2b)
             Eq_b2 = surfcond_2(bb2, dic)
             Eq_b2x = Eq_b2 & C.i
             Eq_b2y = Eq_b2 & C.j
             Eq_b2z = Eq_b2 & C.k
-            BC_list += [Eq_b2x,Eq_b2y,Eq_b2z]
+            BC_list += [Eq_b2x, Eq_b2y, Eq_b2z]
 
     elif condB == "Thick":
         conservation_B = surfcond(B - psi, dic)
@@ -395,16 +399,592 @@ def Bound_nosolve(U, B, psi, psi_2b, dic, order_v, order_t):
             Eq_b2z = conservation_B_2 & C.k
             BC_list += [Eq_b2x, Eq_b2y, Eq_b2z, Eq_E2x, Eq_E2y]
 
-
     if order_v == 'no':
         TEq = BC_list
     else:
         TEq = [taylor(eq, order_v, order_t, dic)
                for eq in BC_list]
-    print('NUmber of BC: ',len(TEq))
+    print('Number of BC: ', len(TEq))
     TEq = Matrix([powsimp(expand(tex.xreplace(dic)))
                   for tex in TEq])
     return(TEq)
+
+
+""" Integrate along x numerically for a given size of topography zeta_t (== et) """
+
+
+def intepi(requ, zeta_t):
+    func =re(requ.xreplace({y:0,et:zeta_t,ev:1}))**2
+
+    free = lambdify([x],func,modules = 'mpmath')
+    # print(free(zeta_t))
+    # print('func',free(0, 1,zeta_t)**2)
+    # integrale = integ.quad(lambda x: free(x, 1,
+    #                                       zeta_t)**2, -np.pi, np.pi)[0]
+
+    integrale = mp.quad(free,[-mp.pi,mp.pi])
+    # print('int',integrale)
+    return(mp.sqrt(integrale / (2 * mp.pi)))
+
+
+
+
+    # print('equations created')
+    # # print('eq0 : ',testbound[0])
+    # print('int0 zeta = 1 : ',intepi(testbound[0],1))
+    # print('int0 zeta = 1e-5 : ',intepi(testbound[0],1e-5))
+    # print('############### by args ####################')
+    # # print('eq0 : ',testbound[0].args[0])
+    # print('int0 zeta = 1 : ',intepi(testbound[0].args[0],1))
+    # print('int0 zeta = 1e-5 : ',intepi(testbound[0].args[0],1e-5))
+    # print('##############')
+    # # print('eq0 : ',testbound[0].args[1])
+    # print('int0 zeta = 1 : ',intepi(testbound[0].args[1],1))
+    # print('int0 zeta = 1e-5 : ',intepi(testbound[0].args[1],1e-5))
+def BaseField(dic):
+    U = U0 * u0.xreplace(DIC)
+    B = qAl * b0.xreplace(DIC)
+    p = 0
+    rho = rho0.xreplace(DIC)
+
+    if params.condB == 'Thick':
+        psi_2b = Symbol('psi0x_2b') * C.i + \
+            Symbol('psi0y_2b') * C.j + Symbol('psi0z_2b') * C.k
+        psi_2b = psi_2b + (Symbol('psi0x_2b_z') * C.i +
+                           Symbol('psi0y_2b_z') * C.j + Symbol('psi0z_2b_z') * C.k) * z
+
+        psi = Symbol('psi0x') * C.i + Symbol('psi0y') * \
+            C.j + Symbol('psi0z') * C.k
+        psi = psi + (Symbol('psi0x_z') * C.i + Symbol('psi0y_z')
+                     * C.j + Symbol('psi0z_z') * C.k) * z
+
+        if Bound_nb == 1:
+            symb = [Symbol('psi0x'), Symbol('psi0y'), Symbol('psi0z'), Symbol(
+                'psi0x_z'), Symbol('psi0y_z'), Symbol('psi0z_z')]
+        if Bound_nb == 2:
+            symb = [Symbol('psi0x'), Symbol('psi0y'), Symbol('psi0z'), Symbol('psi0x_z'),
+                    Symbol('psi0y_z'), Symbol('psi0z_z'), Symbol(
+                        'psi0x_2b'), Symbol('psi0y_2b'),
+                    Symbol('psi0z_2b_z'), Symbol('psi0x_2b_z'), Symbol('psi0y_2b_z'), Symbol('psi0z_2b_z')]
+
+    if params.condB == 'harm pot':
+
+        psi = Symbol('psi0') + Symbol('psi0_x') * x + \
+            Symbol('psi0_y') * y + Symbol('psi0_z') * z
+        psi_2b = Symbol('psi0_2b') + Symbol('psi0_x_2b') * \
+            x + Symbol('psi0_y_2b') * y + Symbol('psi0_z_2b') * z
+
+        if Bound_nb == 1:
+            symb = [Symbol('psi0'), Symbol('psi0_x'),
+                    Symbol('psi0_y'), Symbol('psi0_z')]
+        if Bound_nb == 2:
+            symb = [Symbol('psi0'), Symbol('psi0_x'), Symbol('psi0_y'), Symbol('psi0_z'),
+                    Symbol('psi0_2b'), Symbol('psi0_x_2b'), Symbol('psi0_y_2b'), Symbol('psi0_z_2b')]
+
+    eqpsi0 = Bound_nosolve(U, B, psi, psi_2b, DIC, 0, 0)
+    solpsi0 = solve(eqpsi0, symb, rational=False)
+
+    psi = psi.xreplace(solpsi0)
+    psi = psi.xreplace(dict(zip(symb, np.zeros(len(symb)))))
+    psi_2b = psi_2b.xreplace(solpsi0)
+    psi_2b = psi_2b.xreplace(dict(zip(symb, np.zeros(len(symb)))))
+
+    so_part = zeros(8, 1)
+
+    kzpsi = 0
+    U_ord_0 = U
+    B_ord_0 = B
+    p_ord_0 = p
+    rho_ord_0 = rho
+
+    P0 = Symbol('P0_x') * x + Symbol('P0_y') * y + Symbol('P0_z') * z
+
+    eqP = (makeEquations(U, B, P0, rho, 0, 0, DIC))
+
+    p = P0.xreplace(solve(eqP, [Symbol('P0_x'), Symbol(
+        'P0_y'), Symbol('P0_z'),Symbol('P0_zz')],rational =False)).xreplace(DIC)
+    return(U, B,p,rho,psi,psi_2b)
+
+
+def compute_order(U, B,p,rho,psi,psi_2b, dic, iv, it):
+    print("########################### ORDER", 'E', (iv, it))
+    so_part = zeros(8, 1)
+    if iv == 1 and it == 0:
+        P0 = Symbol('P0_x') * x + Symbol('P0_y') * y + Symbol('P0_z') * z
+        p = p + ev * P0
+        eqP = (makeEquations(U, B, p, rho, 1, 0, DIC))
+        soeqp = solve(eqP, [Symbol('P0_x'), Symbol(
+            'P0_y'), Symbol('P0_z')], rational=False)
+        p = p.xreplace(soeqp)
+
+        if params.condB == "Thick":
+            TEq = Bound_nosolve(U, B, psi, psi_2b, DIC, iv, it)
+            expo = findexp(TEq)
+            B0 = B
+            psi0 = psi
+            for ex in expo:
+                ansatz = ex * exp(I * kz * z)
+                B0 += (Symbol('BOx') * C.i + Symbol('BOy') *
+                       C.j + Symbol('BOz') * C.k) * ev * ansatz
+                psi0 += (Symbol('bmx') * C.i + Symbol('bmy') *
+                         C.j + Symbol('bmz') * C.k) * ev * ansatz
+
+            eqpsi0 = diff(psi0, t) - (qRmm * laplacian(psi0))
+            eqb0 = diff(B0, t) - (qRm * laplacian(B0) + (curl(U.cross(B0))))
+
+            eqb0x = taylor(eqb0, 1, 0, DIC)
+            eqpsi0 = taylor(eqpsi0, 1, 0, DIC)
+
+            eqpsi0 = simp(eqpsi0)
+            eqb0 = simp(eqb0)
+            exp_time = findexp(Matrix([eqpsi0]))
+
+            psi1 = psi
+            B1 = B
+            for ext in exp_time:
+                equ = (simplify(comat(eqpsi0, ext) / ext)).to_matrix(C)
+                sokzpsi = solve(equ[0], kz, rational=False)
+                sokzpsi = np.array([m.evalf(mp.mp.dps) for m in sokzpsi])
+                sokzpsi = sokzpsi[[mp.im(m.xreplace(DIC).evalf(mp.mp.dps)) > 10**(
+                    -mp.mp.dps) for m in sokzpsi]][0].xreplace(DIC).evalf(mp.mp.dps)
+                psi1 = psi1 + (Symbol('bmx') * C.i + Symbol('bmy')
+                               * C.j) * ext.xreplace({kz: sokzpsi}) * ev
+
+                equ = (simplify(comat(eqb0, ext) / ext)).to_matrix(C)
+                sokzb = solve(equ[0], kz, rational=False)
+                sokzb = np.array([m.evalf(mp.mp.dps) for m in sokzb])
+                sokzb = sokzb[[mp.im(m.xreplace(DIC).evalf(mp.mp.dps)) < -10**(-mp.mp.dps)
+                               for m in sokzb]][0].xreplace(DIC).evalf(mp.mp.dps)
+                B1 = B1 + (Symbol('BOx') * C.i + Symbol('BOy') *
+                           C.j) * ext.xreplace({kz: sokzb}) * ev
+
+            psi_2b = 1
+
+            Boun0 = Bound_nosolve(U, B1, psi1, psi_2b, {
+                                  **DIC, **DIC}, 1, 0)
+
+            exp_time = findexp(Matrix([B1.to_matrix(C), psi1.to_matrix(C)]))
+            for ext in exp_time:
+
+                def coe(x): return x.coeff(ext.xreplace({z: 0}))
+                soB0 = solve(Boun0.applyfunc(coe),
+                             dict=True, rational=False)[0]
+                B += comat(B1, ext).xreplace(soB0)
+
+                psi += comat(psi1, ext).xreplace(soB0)
+
+    elif i >= lim_part:
+        print('i=', i)
+        print("Particular solution")
+        eq = makeEquations(U, B, p, rho, iv, it, DIC)
+        var = [Symbol('u' + str(i) + 'x'), Symbol('u' + str(i) + 'y'), Symbol('u' + str(i) + 'z'), Symbol('p' + str(i)),
+               Symbol('b' + str(i) + 'x'), Symbol('b' + str(i) + 'y'), Symbol('b' + str(i) + 'z'), Symbol('rho' + str(i))]
+        Mc, rmec = linear_eq_to_matrix(eq, var)
+
+        expo = findexp(rmec)
+
+        so_part = zeros(8, 1)
+        Up = U
+        Bp = B
+        pp = p
+        rhop = rho
+
+        for ex in expo:
+            Up = Up + ev**iv * et**it * (Function('u' + str(i) + 'x')(t) * C.i + Function(
+                'u' + str(i) + 'y')(t) * C.j + Function('u' + str(i) + 'z')(t) * C.k) * ex
+            Bp = Bp + ev**iv * et**it * (Function('b' + str(i) + 'x')(t) * C.i + Function(
+                'b' + str(i) + 'y')(t) * C.j + Function('b' + str(i) + 'z')(t) * C.k) * ex
+            pp = pp + ev**iv * et**it * (Function('p' + str(i))(t)) * ex
+            rhop = rhop + ev**iv * et**it * (Function('rho' + str(i))(t)) * ex
+
+        varom = [Symbol('u' + str(i) + 'x'), Symbol('u' + str(i) + 'y'), Symbol('u' + str(i) + 'z'), Symbol('p' + str(i)),
+                 Symbol('b' + str(i) + 'x'), Symbol('b' + str(i) + 'y'), Symbol('b' + str(i) + 'z'), Symbol('rho' + str(i))]
+
+        var = Matrix([Function('u' + str(i) + 'x')(t), Function('u' + str(i) + 'y')(t), Function('u' + str(i) + 'z')(t),  Function('p' + str(i))(t),
+                      Function('b' + str(i) + 'x')(t), Function('b' + str(i) + 'y')(t), Function('b' + str(i) + 'z')(t), Function('rho' + str(i))(t)])
+        var_keep = var
+
+        eqt = makeEquations(Up, Bp, pp, rhop, iv, it, DIC)
+        # expeq = findexp(eqt)
+        #
+        # eqtcount = eqt
+
+        for ansatz in expo:
+            var = var_keep
+
+            def coe(x): return x.coeff(ansatz)
+            eqp = eqt.applyfunc(coe)
+            # eqtcount = eqtcount - eqp * ansatz
+            print('ansatz', ansatz)
+
+            # Tilt in the reference of the topography
+            ansatz0 = ansatz.xreplace({z: 0})
+            tilt = (simplify((gradient(ansatz0) / ansatz0)
+                             ).normalize()).to_matrix(C)
+            if sum(abs(tilt)) == 0:
+                # tilt = ((C.i).normalize()).to_matrix(C)
+                eqp.row_del(2)
+            else:
+                MNS = eqp.row((0, 1, 3))
+                NS_modif = ((MNS.T) * (tilt))
+                eqp[0] = NS_modif
+                eqp.row_del(1)
+            # print('eqp1',eqp,'\n')
+            eqp = eqp.xreplace({y: 0})
+
+            Mp1, rmep1 = linear_eq_to_matrix(eqp.xreplace(
+                dict(zip(var_keep, varom))).doit(), varom)
+
+            try:
+                soluchap, pa = (Mp1.gauss_jordan_solve(rmep1))
+                print('gauss succeed')
+            except:
+                soluchap = Mp1.pinv_solve(
+                    rmep1, arbitrary_matrix=zeros(shape(Mp1)[0], 1))
+                soluchap = sympify(
+                    mp.chop(mpmathM(soluchap), tol=10**(-mp.mp.dps / 2)))
+
+
+            pa = Matrix(0, 1, [])
+
+            if pa == Matrix(0, 1, []):
+                sop = soluchap * ansatz
+                # print('steady solution ok')
+            else:
+                raise(ValueError)
+            so_part = so_part + sop
+
+    #####################################
+    ######  Homogeneous solution  #######
+    #####################################
+    if (iv, it) != (0, 0) and (iv, it) != (1, 0):
+        print("Homogeneous solution")
+
+        # Create the variable as Ubnd = Sum(U,0,n-1) + Upart + U hom
+        Usopart = so_part[0] * C.i + \
+            so_part[1] * C.j + so_part[2] * C.k
+        Bsopart = so_part[4] * C.i + \
+            so_part[5] * C.j + so_part[6] * C.k
+        psopart = so_part[3]
+        rhosopart = so_part[7]
+        ### test of res of particular sol ###
+        if params.test == 1:
+            print('Test of the particular solutions at order E', (iv, it))
+            testequations = makeEquations(
+                U + ev**iv * et**it * Usopart, B + ev**iv * et**it * Bsopart, p + ev**iv * et**it * psopart, rho + ev**iv * et**it * rhosopart, iv, it, DIC)
+            testequations = simplify(testequations.xreplace(
+                {x: 1, y: 0, z: -1, t: 0})).evalf()
+            testequations = simplify(testequations.evalf())
+            print('Residuals = ')
+            print(testequations)
+    #     #
+        # + ev**iv * et**it * (Function('Uhomx')(x, y, z, t)
+        Ubnd = U + ev**iv * et**it * Usopart
+        # * C.i + Function('Uhomy')(x, y, z, t) * C.j + Function('Uhomz')(x, y, z, t) * C.k)
+        # + ev**iv * et**it * (Function('Bhomx')(x, y, z, t)
+        Bbnd = B + ev**iv * et**it * Bsopart
+        # * C.i + Function('Bhomy')(x, y, z, t) * C.j + Function('Bhomz')(x, y, z, t) * C.k)
+        # + ev**iv * et**it * (Symbol('Uhomx')* C.i + Symbol('Uhomy') * C.j + Symbol('Uhomz') * C.k)
+        Ubnd = U + ev**iv * et**it * Usopart
+        # + ev**iv * et**it *  (Symbol('Bhomx')* C.i + Symbol('Bhomy') * C.j + Symbol('Bhomz') * C.k)
+        Bbnd = B + ev**iv * et**it * Bsopart
+
+    # Calculate the boundary conditions equations
+        psiBnd = psi
+        psiBnd_2 = psi_2b
+
+        TEq = Bound_nosolve(Ubnd, Bbnd, psiBnd, psiBnd_2,
+                            DIC, iv, it)
+        expo = findexp(TEq)
+        Uh = U + ev**iv * et**it * Usopart
+        Bh = B + ev**iv * et**it * Bsopart
+        ph = p + ev**iv * et**it * psopart
+        rhoh = rho + ev**iv * et**it * rhosopart
+        for ex in expo:
+            ansatz = ex * exp(I * kz * z)
+
+            Uh = Uh + ev**iv * et**it * (Symbol('u' + str(i) + 'x') * C.i + Symbol(
+                'u' + str(i) + 'y') * C.j + Symbol('u' + str(i) + 'z') * C.k) * ansatz
+            Bh = Bh + ev**iv * et**it * (Symbol('b' + str(i) + 'x') * C.i + Symbol(
+                'b' + str(i) + 'y') * C.j + Symbol('b' + str(i) + 'z') * C.k) * ansatz
+            ph = ph + ev**iv * et**it * (Symbol('p' + str(i))) * ansatz
+            rhoh = rhoh + ev**iv * et**it * (Symbol('rho' + str(i))) * ansatz
+
+        # Calculate the governings equations
+
+        # DIC)
+        eq = makeEquations(Uh, Bh, ph, rhoh, iv, it, DIC)
+        var = [Symbol('u' + str(i) + 'x'), Symbol('u' + str(i) + 'y'), Symbol('u' + str(i) + 'z'), Symbol('p' + str(i)),
+               Symbol('b' + str(i) + 'x'), Symbol('b' + str(i) + 'y'), Symbol('b' + str(i) + 'z'), Symbol('rho' + str(i))]
+        Mhtot, rmehtot = linear_eq_to_matrix(eq, var)
+
+        expeq = findexp(Mhtot)
+
+        if params.test == 1:
+            print('rmehtot', simplify(simplify(rmehtot.xreplace(DIC).xreplace(
+                {x: 0, y: 0, t: 0, z: 0}).evalf())))
+
+        UBnd = U + ev**iv * et**it * Usopart
+        BBnd = B + ev**iv * et**it * Bsopart
+
+        sol = np.zeros(len(expeq), dtype=object)
+        eig = np.zeros(len(expeq), dtype=object)
+        kzpsi = np.zeros(len(expeq), dtype=object)
+        kzpsi_2 = np.zeros(len(expeq), dtype=object)
+
+        for j, ansatz in enumerate(expeq):
+
+            print('anstaz', ansatz)
+            def coe(x): return x.coeff(ansatz)
+            M = Mhtot.applyfunc(coe)
+            ansatz0 = ansatz.xreplace({z: 0})
+            tilt = (simplify((gradient(ansatz0) / ansatz0)
+                             ).normalize()).to_matrix(C)
+            print('tilt', tilt)
+            if sum(abs(tilt)) == 0:
+                print('NS not tilted')
+                M.row_del(2)  # remove useless equation
+                M = M.xreplace({y: 0})
+            else:
+                MNS = M.row((0, 1, 3))
+                NS_modif = ((MNS.T) * (tilt)).T
+                M[0, :] = NS_modif
+                M.row_del(1)  # remove useless equation
+                M = M.xreplace({y: 0})
+
+
+            sol[j], eig[j], M1 = eigen(M,ansatz, DIC)
+
+            # Create variable necessary to apply boundary conditions
+
+            UBnd = UBnd + ev**iv * et**it * (((Symbol('u' + str(i) + 'x') * C.i + Symbol(
+                'u' + str(i) + 'y') * C.j + Symbol('u' + str(i) + 'z') * C.k))).xreplace(makedic(veigen(eig[j], sol[j],ansatz), i))
+            BBnd = BBnd + ev**iv * et**it * (((Symbol('b' + str(i) + 'x') * C.i + Symbol(
+                'b' + str(i) + 'y') * C.j + Symbol('b' + str(i) + 'z') * C.k))).xreplace(makedic(veigen(eig[j], sol[j],ansatz), i))
+
+            psian = ev**iv * et**it * Symbol('psi' + str(i)) * ansatz
+            if params.condB == "harm pot":
+                kzpsi[j] = np.array(
+                    solve(simplify(laplacian(psian) / psian), kz, rational=False))
+                kzpsi[j] = kzpsi[j][[
+                    np.imag(np.complex128(kps)) >= 0 for kps in kzpsi[j]]][0]
+                psiBnd = psiBnd + ev**iv * et**it * \
+                    (Symbol('psi' + str(i)) * ansatz).xreplace({kz: kzpsi[j]})
+                if Bound_nb == 2:
+                    kzpsi_2[j] = -kzpsi[j]
+                    psiBnd_2 = psiBnd_2 + ev**iv * et**it * \
+                        (Symbol('psi_2b' + str(i)) *
+                         ansatz).xreplace({kz: kzpsi_2[j]})
+
+            if params.condB == "Thick":
+
+                if buf == 1:
+                    kzpsi[j] = np.array(solve(simplify((diff(psian, t) - qRmm * diff(
+                        psian, z, z)) / psian).xreplace({**DIC, **DIC}), kz, rational=False))
+                else:
+                    kzpsi[j] = np.array(solve(simplify((diff(psian, t) - qRmm * laplacian(
+                        psian)) / psian).xreplace({**DIC, **DIC}), kz, rational=False))
+                kzpsi[j] = np.array([kzps.evalf(mp.mp.dps)
+                                    for kzps in kzpsi[j]])
+                kzpsi[j] = kzpsi[j][[
+                    np.imag(np.complex128(kps)) >= 0 for kps in kzpsi[j]]][0]
+                psiBnd = psiBnd + ev**iv * et**it * \
+                    ((Symbol('bmx') * C.i + Symbol('bmy') * C.j +
+                     Symbol('bmz') * C.k) * ansatz).xreplace({kz: kzpsi[j]})
+
+                if Bound_nb == 2:
+                    kzpsi_2[j] = np.array(solve(simplify((diff(psian, t) - qRmc * laplacian(
+                        psian)) / psian).xreplace({**DIC, **DIC}), kz, rational=False))
+                    kzpsi_2[j] = np.array([kzps.evalf(mp.mp.dps)
+                                          for kzps in kzpsi_2[j]])
+                    kzpsi_2[j] = kzpsi_2[j][[
+                        np.imag(np.complex128(kps)) <= 0 for kps in kzpsi_2[j]]][0]
+                    psiBnd_2 = psiBnd_2 + ev**iv * et**it * \
+                        ((Symbol('bmx_2') * C.i + Symbol('bmy_2') * C.j +
+                         Symbol('bmz_2') * C.k) * ansatz).xreplace({kz: kzpsi_2[j]})
+
+        # Add constant value for homogeneous solutions
+        UBnd += ev**iv * et**it * (Symbol('CUx') * C.i + Symbol('CUy')
+                                   * C.j + Symbol('CUz') * C.k)
+        BBnd += ev**iv * et**it * (Symbol('CBx') * C.i + Symbol('CBy')
+                                   * C.j + Symbol('CBz') * C.k)
+        Eqbound = Bound_nosolve(UBnd, BBnd, psiBnd, psiBnd_2, {
+            **DIC, **DIC}, iv, it)
+    # Decompose equations by exponential create and solve matrix
+
+        if params.condB == "Thick":
+            if Bound_nb == 1:
+                coeffs = [Symbol('C' + str(i)) for i in range(len(Eqbound) - 3)
+                          ] + [Symbol('bmx'), Symbol('bmy'), Symbol('bmz')]
+            if Bound_nb == 2:
+                coeffs = [Symbol('C' + str(i)) for i in range(len(Eqbound) - 6)] + [Symbol('bmx_2'),
+                                                                                    Symbol('bmy_2'), Symbol('bmz_2')] + [Symbol('bmx'), Symbol('bmy'), Symbol('bmz')]
+
+        else:
+            if Bound_nb == 1:
+                coeffs = [Symbol('C' + str(i)) for i in range(len(Eqbound) - 1)] + [Symbol(
+                    "psi" + str(i))]
+            if Bound_nb == 2:
+                coeffs = [Symbol('C' + str(i)) for i in range(len(Eqbound) - 2)] + [Symbol(
+                    "psi" + str(i)), Symbol("psi_2b" + str(i))]
+        Matbtot, resbtot = linear_eq_to_matrix(Eqbound, coeffs)
+
+        Matcount = Matbtot
+        rescount = resbtot
+        for j, ansatz in enumerate(expeq):
+            print('ansatz', ansatz.evalf(3))
+
+            def coe(x): return x.coeff(ansatz.xreplace({z: 0}))
+
+            Mat = (Matbtot).applyfunc(coe)  # .evalf(mp.mp.dps*3)
+            res = (resbtot).applyfunc(coe)  # .evalf(mp.mp.dps*3)
+            try:
+                abc, par_abc = Mat.gauss_jordan_solve(res)
+            except:
+                print('Gauss pivot failed')
+                print('pinv')
+
+                abc = Mat.pinv_solve(
+                    res, arbitrary_matrix=zeros(shape(Mat)[0], 1))
+
+            # verification
+            Matcount = Matcount - ((Matbtot).applyfunc(coe)
+                                   * (ansatz.xreplace({z: 0})))
+            rescount = rescount - ((rescount).applyfunc(coe)
+                                   * (ansatz.xreplace({z: 0})))
+
+            # Write homogeneous solution
+            solhom = zeros(8, 1)
+
+            for l in range(len(sol[j])):
+
+                solhom = solhom + \
+                    abc[l] * Matrix(eig[j][l]) * \
+                    ansatz.xreplace({kz: sol[j][l]})
+
+            abc = list(abc)
+    # Expression of the final calculated variable Un
+
+            U = U + ev**iv * et**it * (solhom[0] * C.i + solhom[1]
+                                       * C.j + solhom[2] * C.k)
+            B = B + ev**iv * et**it * (solhom[4] * C.i + solhom[5]
+                                       * C.j + solhom[6] * C.k)
+            p = p + ev**iv * et**it * solhom[3]
+            rho = rho + ev**iv * et**it * solhom[7]
+
+            if params.condB == "Thick":
+                psi = psi + ev**iv * et**it * (abc[-3] * C.i + abc[-2] * C.j + abc[-1] * C.k) * \
+                    ansatz.xreplace({kz: kzpsi[j]})
+                if Bound_nb == 2:
+                    psi_2b = psi_2b + ev**iv * et**it * (abc[-6] * C.i + abc[-5] * C.j + abc[-4] * C.k) * \
+                        ansatz.xreplace({kz: kzpsi_2[j]})
+
+            else:
+                if Bound_nb == 1:
+                    psi = psi + ev**iv * et**it * abc[-1] * \
+                        ansatz.xreplace({kz: kzpsi[j]})
+                if Bound_nb == 2:
+                    psi = psi + ev**iv * et**it * abc[-2] * \
+                        ansatz.xreplace({kz: kzpsi[j]})
+                    psi_2b = psi_2b + ev**iv * et**it * \
+                        abc[-1] * ansatz.xreplace({kz: -kzpsi[j]})
+
+        rescount = simplify(simplify(simplify(rescount))).xreplace({x: 1})
+        if params.test == 1:
+            print('Matcount', simplify(simplify(simplify(Matcount))))
+            print('rescount ::::::::::::::::::::', rescount)
+
+        U = U + ev**iv * et**it * Usopart
+        B = B + ev**iv * et**it * Bsopart
+        p = p + ev**iv * et**it * psopart
+        rho = rho + ev**iv * et**it * rhosopart
+        # B = B + ev**iv * et**it*(rescount[1]*C.i+rescount[2]*C.j+rescount[3]*C.k)
+        # print('rescount',rescount)
+        try:
+            const = solve(rescount, rational=False)
+        except:
+            const = solve(rescount)
+
+        print('const', const)
+        # + ev**iv * et**it * (Symbol('CzUx') * C.i + Symbol('CzUy')
+        U += ev**iv * et**it * (Symbol('CUz') * C.k)
+        # * C.j )*z
+        B += ev**iv * et**it * (Symbol('CBx') * C.i + Symbol('CBy')
+                                * C.j + Symbol('CBz') * C.k)
+        U = U.xreplace(const)
+        B = B.xreplace(const)
+
+        U = (U.xreplace(DIC).xreplace(DIC)
+             ).xreplace({Symbol('tau0'): 0})  # .xreplace({Symbol('tau1'):1})
+        B = (B.xreplace(DIC).xreplace(DIC)
+             ).xreplace({Symbol('tau0'): 0})  # .xreplace({Symbol('tau1'):1})
+        # .xreplace({Symbol('tau0'):1}).xreplace({Symbol('tau1'):1})
+        rho = (rho.xreplace(DIC).xreplace({**
+               DIC, **DIC})).xreplace({Symbol('tau0'): 0})
+        # .xreplace({Symbol('tau0'):1}).xreplace({Symbol('tau1'):1})
+        p = (p.xreplace(DIC).xreplace({**
+             DIC, **DIC})).xreplace({Symbol('tau0'): 0})
+    return(U,B,p,rho,psi,psi_2b)
+
+def testBC(U,B,p,rho,psi,psi_2b,dic,iv,it):
+    testbound = Bound_nosolve(U, B, psi, psi_2b, DIC, iv, it)
+    testbound = testbound.xreplace({x: mp.pi / 4, y: 0, t: 0}).evalf()
+    testbound = mp.chop(mpmathM(testbound.evalf(3)),
+                        tol=10**(-mp.mp.dps / 1.2))
+    print('BC Order' + str(iv) + ',' + str(it))
+    print(testbound)
+    return()
+
+def testEQ(U,B,p,rho,psi,psi_2b,dic,iv,it):
+    testequations = makeEquations(U, B, p, rho, iv, it, DIC)
+    testequations = testequations.xreplace(
+        {x: mp.pi / 4, y: 0, t: 0, z: 0}).evalf()
+    testequations = mp.chop(
+        mpmathM(testequations.evalf(3)), tol=10**(-mp.mp.dps / 1.2))
+    print('Equations Order ' + str(iv) + ',' + str(it))
+    print(testequations)
+    return()
+
+def testRES_BC(U,B,p,rho,psi,psi_2b,dic):
+    print("Test residuals of U.n")
+    testbound = Bound_nosolve(U, B, psi, psi_2b, DIC, 'no', 'no')
+    UN = testbound[0]
+    ZETA_B = 1e-4
+    LIM = 0.05
+    import scipy
+    sol = scipy.optimize.root(lambda x:intepi(UN,x)-LIM, ZETA_B)
+    print(sol)
+    print('RESFINAL',sol.fun+LIM)
+    print('realres : ',intepi(UN,sol.x))
+    print('ZETA FINAL',sol.x)
+
+def testRES_EQ(U,B,p,rho,psi,psi_2b,dic):
+    print("Test residuals of NS")
+    testeq = makeEquations(U, B, p, rho, 'no', 'no', DIC)
+    UN = surfcond(sqrt(testeq[0]**2+testeq[1]**2+testeq[2]**2),DIC)
+    ZETA_B = 1e-3
+    LIM = 1e-5
+    RES = 1
+    import scipy
+    sol = scipy.optimize.root(lambda x:intepi(UN,x)-LIM, ZETA_B)
+    print('RESFINAL',sol.fun+LIM)
+    print('ZETA FINAL',sol.x)
+
+    # def test_residuals(U, B, psi, psi_2b, dic):
+    #     testbound = Bound_nosolve(U, B, psi, psi_2b, dic, 'no', 'no')
+    #     integ = [intepi(eq, 1e-5) for eq in testbound]
+    #     print('integ : ', integ)
+    #     args = [eq.args for eq in testbound]
+    #     # print(args)
+    #     for j, arg in enumerate(args):
+    #         # print(list(arg))
+    #         integ_args = [intepi(eq, 1e-5) for eq in list(arg)]
+    #         if len(integ_args) > 0:
+    #             print('integ_args', np.nanmax(integ_args))
+    #             print('val :  ', integ[j] / np.nanmax(integ_args))
+
+
+
 
 #########################
 ###     Variables     ###
@@ -474,6 +1054,15 @@ u0 = Function("u0x")(x, y, z, t) * C.i + Function("u0y")(x, y,
 b0 = Function("b0x")(x, y, z, t) * C.i + Function("b0y")(x, y,
                                                          z, t) * C.j + Function("b0z")(x, y, z, t) * C.k
 
+
+
+####################################
+##### Definition and test ##########
+####################################
+# Parameters chosen for calculation
+DIC = params.DICO
+LAT = params.LAT
+
 ansatz = 0
 g = -g0 * C.k
 f = f0 + et * f1  # +et**2 *f2
@@ -487,7 +1076,7 @@ nx = (nfo & C.i)
 ny = (nfo & C.j)
 nz = (nfo & C.k)
 
-if params.dom[f1] != 0:
+if DIC[f1] != 0:
     tfox = (C.i) + ((ny / nx) * C.j) + (-((nx**2 + ny**2) / (nx * nz)) * C.k)
     tfox = tfox.normalize()
     tfoy = (-(ny / nx) * C.i) + (C.j) + (0 * C.k)
@@ -504,7 +1093,7 @@ if Bound_nb == 2:
     nx2 = (nfo2 & C.i)
     ny2 = (nfo2 & C.j)
     nz2 = (nfo2 & C.k)
-    if params.dom[f1_2] != 0:
+    if DIC[f1_2] != 0:
         tfox2 = (C.i) + ((ny2 / nx2) * C.j) + \
             (-((nx2**2 + ny2**2) / (nx2 * nz2)) * C.k)
         tfox2 = -tfox2 / sqrt((tfox2 & C.i)**2 +
@@ -521,18 +1110,12 @@ if Bound_nb == 2:
 ###     SCRIPT     ###
 ######################
 
-# Parameters chosen for calculation
-dico0 = params.dom
-# dico1 = params.Buffet2010
-dico1 = params.Glane
-# dico1 = params.Me
 
-LAT = params.LAT
 
 # CHECK the realness of imposed Field
 if params.test == 1:
-    testre = Matrix([dico0[u0x], dico0[u0y], dico0[u0z], dico0[b0x],
-                    dico0[b0y], dico0[b0z], dico0[f1], dico0[f1_2]])
+    testre = Matrix([DIC[u0x], DIC[u0y], DIC[u0z], DIC[b0x],
+                    DIC[b0y], DIC[b0z], DIC[f1], DIC[f1_2]])
     testre = np.imag(np.sum(np.array((testre.xreplace(
         {x: 10, y: 10, t: 10, omega: 10, ev: 1}).evalf()), dtype=np.complex128)))
     if testre > 1e-15:
@@ -540,792 +1123,180 @@ if params.test == 1:
         raise ValueError
 
 
-if dico1[qRe] != 0 and params.condU == 'Inviscid':
+if DIC[qRe] != 0 and params.condU == 'Inviscid':
     print("error Inviscid fluid incompatible with qRe != 0")
-    raise(ValueError)
+    print("qRe set to 0")
+    DIC[qRe] = 0
 
-n = nfo.xreplace({**dico0, **dico1}
-                 ).doit().xreplace({**dico0, **dico1})
+
+#################
+
+n = nfo.xreplace(DIC
+                 ).doit().xreplace(DIC)
 # 1st tangential vector
-tx = tfox.xreplace({**dico0, **dico1}
-                   ).doit().xreplace({**dico0, **dico1})
+tx = tfox.xreplace(DIC
+                   ).doit().xreplace(DIC)
 # 2nd tangential vector
-ty = tfoy.xreplace({**dico0, **dico1}
-                   ).doit().xreplace({**dico0, **dico1})
+ty = tfoy.xreplace(DIC
+                   ).doit().xreplace(DIC)
 
 # same for the 2nd boundary
 if Bound_nb == 2:
-    n2 = nfo2.xreplace({**dico0, **dico1}
-                       ).doit().xreplace({**dico0, **dico1})
+    n2 = nfo2.xreplace(DIC
+                       ).doit().xreplace(DIC)
 
-    tx2 = (tfox2.xreplace({**dico0, **dico1})
-           ).doit().xreplace({**dico0, **dico1})
+    tx2 = (tfox2.xreplace(DIC)
+           ).doit().xreplace(DIC)
     ty2 = tfoy2.xreplace(
-        {**dico0, **dico1}).doit().xreplace({**dico0, **dico1})
+        DIC).doit().xreplace(DIC)
 
-# Calculus for each order i
-print('Utest', u0.xreplace({**dico0, **dico1}).coeff(ev))
-test_e = u0.xreplace({**dico0, **dico1}).coeff(ev)
+
+
+print('Utest', expand(u0.xreplace(DIC)).coeff(ev))
+print(u0.xreplace(DIC))
+test_e = expand(u0.xreplace(DIC)).coeff(ev)
 print(test_e)
 if test_e == 0:
     ev_test = False
 else:
     ev_test = True
-comb = np.arange(order + 1)
 
-if ev_test == True:
-    list_1 = comb
-    list_2 = comb
-elif ev_test == False:
-    list_1 = np.zeros(len(comb), dtype=np.int64)
-    list_2 = comb
 
-comb = np.unique(np.array(list(itertools.product(list_1, list_2))), axis=0)
-aa = (np.sum(comb, axis=1)) * 10 + np.abs(comb[:, 1] - comb[:, 0])
-idx = aa.argsort()
-orders = comb[idx]
-print(orders)
 if ev_test == True:
     lim_part = 4
 else:
     lim_part = 2
 
-# ov = np.arange(order + 1)
-# orders = list(itertools.product(ov, repeat=2))
-# print(orders)
-# ov = np.arange(order + 1)
-# comb = list(comb(ov, repeat=2))
+orderB = order*2
+parallel = False
+if ev_test == True:
+
+    comb = []
+    for i in range(orderB+1):
+        comb += list(itertools.combinations_with_replacement(np.arange(0,i+1),2))
+    ZU, indice = np.unique(comb,axis=0,return_index=True)
+    comb = np.array(comb)[np.sort(indice)]
+    comb = comb[np.sum(comb,axis = 1) <= orderB]
+    order_list = [np.unique(list(itertools.permutations(co,2)),axis  = 0) for co in comb]
+    if parallel == False:
+        orde = []
+        for o1 in order_list:
+            for o2 in o1:
+                orde += [[o2]]
+        order_list = orde
+
+
+elif ev_test == False:
+    list_1 = np.zeros(len(np.arange(order + 1)), dtype=np.int64)
+    list_2 = np.arange(order + 1)
+    comb = np.unique(np.array(list(itertools.product(list_1, list_2))), axis=0)
+    aa = (np.sum(comb, axis=1)) * 10 + np.abs(comb[:, 1] - comb[:, 0])
+    idx = aa.argsort()
+    order_list = np.array([np.array([co]) for co in comb[idx]])
+
+print(order_list)
+
+#########################################################
+################ SCRIPT #################################
+#########################################################
+
+
+U,B,p,rho,psi,psi_2b = BaseField(DIC)
+
+from multiprocessing import Pool
+plt.figure()
+for i in range(0, len(order_list)):
+    iv = order_list[i][0][0]
+    it = order_list[i][0][1]
+
+    U,B,p,rho,psi,psi_2b = compute_order(U, B,p,rho ,psi,psi_2b,DIC, iv, it)
+
+    if params.test ==True:
+        testBC(U,B,p,rho,psi,psi_2b,DIC,iv,it)
+        testEQ(U,B,p,rho,psi,psi_2b,DIC,iv,it)
+    # testRES_BC(U,B,p,rho,psi,psi_2b,DIC)
+
+    # print('U',U.evalf(1))
+    # print('UN',surfcond(U.dot(n).xreplace(DIC),DIC).doit())
+    Xt = np.logspace(-4,-1,6)
+    Yt = [intepi(surfcond(U.dot(n).xreplace(DIC),DIC).doit(),xt) for xt in Xt]
+
+    plt.plot(Xt,Yt,label = 'order'+str(it))
+
+plt.axhline(0.05)
+plt.axhline(1e-3)
+plt.xscale('log')
+plt.yscale('log')
+plt.legend()
+plt.show()
+    # testRES_EQ(U,B,p,rho,psi,psi_2b,DIC)
+
+
+    #
+    # def parallel(iv, it, U=U, B=B, p=p ,rho =rho , psi=psi,psi_2b=psi_2b, DIC=DIC):
+    #     U, B, p ,rho ,psi,psi_2b =  compute_order(U, B,p,rho ,psi,psi_2b,DIC, iv, it)
+    #     U = ev**iv * et**it * taylor(U,iv,it,DIC)
+    #     B = ev**iv * et**it * taylor(B,iv,it,DIC)
+    #     p = ev**iv * et**it * taylor(p,iv,it,DIC)
+    #     rho = ev**iv * et**it * taylor(rho,iv,it,DIC)
+    #     psi = ev**iv * et**it * taylor(psi,iv,it,DIC)
+    #     if Bound_nb == 2:
+    #         psi_2b = ev**iv * et**it*taylor(psi_2b,iv,it,DIC)
+    #     return(U, B, p ,rho ,psi,psi_2b)
+    # print('orders',order_list[i])
+    # if i >0:
+    #     with Pool(2) as poo:
+    #         solution = poo.starmap(parallel, order_list[i])
+    #     for sol in solution:
+    #         U=U+sol[0]
+    #         B=B+sol[1]
+    #         p=p+sol[2]
+    #         rho=rho+sol[3]
+    #         psi=psi+sol[4]
+    #         if Bound_nb == 2:
+    #             psi_2b=psi_2b+sol[5]
+
+
+
+    # test of the residuals ###############""
+    # if (iv, it) != (0, 0) and (iv, it) != (1, 0):
+    # print('##### test of the residuals ####')
+    # test_residuals(U, B, psi, psi_2b,DIC)
+    # else:
+    #     test_res = False
 
-for i in range(0, len(orders)):
-    iv = orders[i][0]
-    it = orders[i][1]
-    print("########################### ORDER", 'E', (iv, it))
-    if atmo == 1:
-        print("######## Atmospheric conditions ########")
-
-    # with this I consider qAl is small
-    if iv == 0 and it == 0:
-        U = U0 * u0.xreplace({**dico0, **dico1})
-        B = qAl * b0.xreplace({**dico0, **dico1})
-        p = 0
-        rho = rho0.xreplace({**dico0, **dico1})
-
-        print('U0 : ', U)
-        print('B0 : ', B)
-
-        if params.condB == 'Thick':
-            psi_2b = Symbol('psi0x_2b') * C.i + \
-                Symbol('psi0y_2b') * C.j + Symbol('psi0z_2b') * C.k
-            psi_2b = psi_2b + (Symbol('psi0x_2b_z') * C.i +
-                               Symbol('psi0y_2b_z') * C.j + Symbol('psi0z_2b_z') * C.k) * z
-
-            psi = Symbol('psi0x') * C.i + Symbol('psi0y') * \
-                C.j + Symbol('psi0z') * C.k
-            psi = psi + (Symbol('psi0x_z') * C.i + Symbol('psi0y_z')
-                         * C.j + Symbol('psi0z_z') * C.k) * z
-
-            if Bound_nb == 1:
-                symb = [Symbol('psi0x'), Symbol('psi0y'), Symbol('psi0z'), Symbol(
-                    'psi0x_z'), Symbol('psi0y_z'), Symbol('psi0z_z')]
-            if Bound_nb == 2:
-                symb = [Symbol('psi0x'), Symbol('psi0y'), Symbol('psi0z'), Symbol('psi0x_z'),
-                        Symbol('psi0y_z'), Symbol('psi0z_z'), Symbol(
-                            'psi0x_2b'), Symbol('psi0y_2b'),
-                        Symbol('psi0z_2b_z'), Symbol('psi0x_2b_z'), Symbol('psi0y_2b_z'), Symbol('psi0z_2b_z')]
-
-        if params.condB == 'harm pot':
-
-            psi = Symbol('psi0') + Symbol('psi0_x') * x + \
-                Symbol('psi0_y') * y + Symbol('psi0_z') * z
-            psi_2b = Symbol('psi0_2b') + Symbol('psi0_x_2b') * \
-                x + Symbol('psi0_y_2b') * y + Symbol('psi0_z_2b') * z
-
-            if Bound_nb == 1:
-                symb = [Symbol('psi0'), Symbol('psi0_x'),
-                        Symbol('psi0_y'), Symbol('psi0_z')]
-            if Bound_nb == 2:
-                symb = [Symbol('psi0'), Symbol('psi0_x'), Symbol('psi0_y'), Symbol('psi0_z'),
-                        Symbol('psi0_2b'), Symbol('psi0_x_2b'), Symbol('psi0_y_2b'), Symbol('psi0_z_2b')]
-
-        eqpsi0 = Bound_nosolve(U, B, psi, psi_2b, {**dico0, **dico1}, iv, it)
-        solpsi0 = solve(eqpsi0, symb, rational=False)
-
-        psi = psi.xreplace(solpsi0)
-        psi = psi.xreplace(dict(zip(symb, np.zeros(len(symb)))))
-        psi_2b = psi_2b.xreplace(solpsi0)
-        psi_2b = psi_2b.xreplace(dict(zip(symb, np.zeros(len(symb)))))
-
-        so_part = zeros(8, 1)
-
-        kzpsi = 0
-        U_ord_0 = U
-        B_ord_0 = B
-        p_ord_0 = p
-        rho_ord_0 = rho
-
-        P0 = Symbol('P0_x') * x + Symbol('P0_y') * y + Symbol('P0_z') * z
-
-        eqP = (makeEquations(U, B, P0, rho, 0, 0, dico0))
-
-        p = P0.xreplace(solve(eqP, [Symbol('P0_x'), Symbol(
-            'P0_y'), Symbol('P0_z')])).xreplace({**dico0, **dico1})
-
-    elif iv == 1 and it == 0:
-        P0 = Symbol('P0_x') * x + Symbol('P0_y') * y + Symbol('P0_z') * z
-        p = p + ev * P0
-        eqP = (makeEquations(U, B, p, rho, 1, 0, {**dico0, **dico1}))
-        soeqp = solve(eqP, [Symbol('P0_x'), Symbol(
-            'P0_y'), Symbol('P0_z')], rational=False)
-        p = p.xreplace(soeqp)
-
-        if params.condB == "Thick":
-            TEq = Bound_nosolve(U, B, psi, psi_2b, {**dico0, **dico1}, iv, it)
-            expo = findexp(TEq)
-            B0 = B
-            psi0 = psi
-            for ex in expo:
-                ansatz = ex * exp(I * kz * z)
-                B0 += (Symbol('BOx') * C.i + Symbol('BOy') *
-                       C.j + Symbol('BOz') * C.k) * ev * ansatz
-                psi0 += (Symbol('bmx') * C.i + Symbol('bmy') *
-                         C.j + Symbol('bmz') * C.k) * ev * ansatz
-
-            eqpsi0 = diff(psi0, t) - (qRmm * laplacian(psi0))
-            eqb0 = diff(B0, t) - (qRm * laplacian(B0) + (curl(U.cross(B0))))
-
-            eqb0x = taylor(eqb0, 1, 0, {**dico0, **dico1})
-            eqpsi0 = taylor(eqpsi0, 1, 0, {**dico0, **dico1})
-
-            eqpsi0 = simp(eqpsi0)
-            eqb0 = simp(eqb0)
-            exp_time = findexp(Matrix([eqpsi0]))
-
-            psi1 = psi
-            B1 = B
-            for ext in exp_time:
-                equ = (simplify(comat(eqpsi0, ext) / ext)).to_matrix(C)
-                sokzpsi = solve(equ[0], kz, rational=False)
-                sokzpsi = np.array([m.evalf(mp.mp.dps) for m in sokzpsi])
-                sokzpsi = sokzpsi[[mp.im(m.xreplace({**dico0, **dico1}).evalf(mp.mp.dps)) > 10**(
-                    -mp.mp.dps) for m in sokzpsi]][0].xreplace({**dico0, **dico1}).evalf(mp.mp.dps)
-                psi1 = psi1 + (Symbol('bmx') * C.i + Symbol('bmy')
-                               * C.j) * ext.xreplace({kz: sokzpsi}) * ev
-
-                equ = (simplify(comat(eqb0, ext) / ext)).to_matrix(C)
-                sokzb = solve(equ[0], kz, rational=False)
-                sokzb = np.array([m.evalf(mp.mp.dps) for m in sokzb])
-                sokzb = sokzb[[mp.im(m.xreplace({**dico0, **dico1}).evalf(mp.mp.dps)) < -10**(-mp.mp.dps)
-                               for m in sokzb]][0].xreplace({**dico0, **dico1}).evalf(mp.mp.dps)
-                B1 = B1 + (Symbol('BOx') * C.i + Symbol('BOy') *
-                           C.j) * ext.xreplace({kz: sokzb}) * ev
-
-            psi_2b = 1
-
-            Boun0 = Bound_nosolve(U, B1, psi1, psi_2b, {
-                                  **dico0, **dico1}, 1, 0)
-
-            exp_time = findexp(Matrix([B1.to_matrix(C), psi1.to_matrix(C)]))
-            for ext in exp_time:
-
-                def coe(x): return x.coeff(ext.xreplace({z: 0}))
-                soB0 = solve(Boun0.applyfunc(coe),
-                             dict=True, rational=False)[0]
-                B += comat(B1, ext).xreplace(soB0)
-
-                psi += comat(psi1, ext).xreplace(soB0)
-
-    elif i >= lim_part:
-        print('i=', i)
-        print("Particular solution")
-        eq = makeEquations(U, B, p, rho, iv, it, {**dico0, **dico1})
-        var = [Symbol('u' + str(i) + 'x'), Symbol('u' + str(i) + 'y'), Symbol('u' + str(i) + 'z'), Symbol('p' + str(i)),
-               Symbol('b' + str(i) + 'x'), Symbol('b' + str(i) + 'y'), Symbol('b' + str(i) + 'z'), Symbol('rho' + str(i))]
-        Mc, rmec = linear_eq_to_matrix(eq, var)
-
-        expo = findexp(rmec)
-
-        so_part = zeros(8, 1)
-        Up = U
-        Bp = B
-        pp = p
-        rhop = rho
-
-        for ex in expo:
-            Up = Up + ev**iv * et**it * (Function('u' + str(i) + 'x')(t) * C.i + Function(
-                'u' + str(i) + 'y')(t) * C.j + Function('u' + str(i) + 'z')(t) * C.k) * ex
-            Bp = Bp + ev**iv * et**it * (Function('b' + str(i) + 'x')(t) * C.i + Function(
-                'b' + str(i) + 'y')(t) * C.j + Function('b' + str(i) + 'z')(t) * C.k) * ex
-            pp = pp + ev**iv * et**it * (Function('p' + str(i))(t)) * ex
-            rhop = rhop + ev**iv * et**it * (Function('rho' + str(i))(t)) * ex
-
-        varom = [Symbol('u' + str(i) + 'x'), Symbol('u' + str(i) + 'y'), Symbol('u' + str(i) + 'z'), Symbol('p' + str(i)),
-                 Symbol('b' + str(i) + 'x'), Symbol('b' + str(i) + 'y'), Symbol('b' + str(i) + 'z'), Symbol('rho' + str(i))]
-
-        var = Matrix([Function('u' + str(i) + 'x')(t), Function('u' + str(i) + 'y')(t), Function('u' + str(i) + 'z')(t),  Function('p' + str(i))(t),
-                      Function('b' + str(i) + 'x')(t), Function('b' + str(i) + 'y')(t), Function('b' + str(i) + 'z')(t), Function('rho' + str(i))(t)])
-        var_keep = var
-
-        eqt = makeEquations(Up, Bp, pp, rhop, iv, it, {**dico0, **dico1})
-        # expeq = findexp(eqt)
-        #
-        # eqtcount = eqt
-
-        for ansatz in expo:
-            var = var_keep
-
-            def coe(x): return x.coeff(ansatz)
-            eqp = eqt.applyfunc(coe)
-            # eqtcount = eqtcount - eqp * ansatz
-            print('ansatz', ansatz, '\n')
-
-            # Tilt in the reference of the topography
-            ansatz0 = ansatz.xreplace({z: 0})
-            tilt = (simplify((gradient(ansatz0) / ansatz0)
-                             ).normalize()).to_matrix(C)
-            if sum(abs(tilt)) == 0:
-                # tilt = ((C.i).normalize()).to_matrix(C)
-                eqp.row_del(2)
-            else:
-                MNS = eqp.row((0, 1, 3))
-                NS_modif = ((MNS.T) * (tilt))
-                eqp[0] = NS_modif
-                eqp.row_del(1)
-            # print('eqp1',eqp,'\n')
-            eqp = eqp.xreplace({y: 0})
-
-            ### compute p ####
-            # pop = solve(eqp,Symbol('p' + str(i)), rational=False)
-            # print(pop)
-            #
-            # var = var.xreplace(pop)
-            # eqp = eqp.xreplace(pop).doit()
-            #
-            Mp1, rmep1 = linear_eq_to_matrix(eqp.xreplace(
-                dict(zip(var_keep, varom))).doit(), varom)
-            # Mp1 = sympify(mpmathM(Mp1))
-            # rmep1 = sympify(mpmathM(rmep1))
-            # Mp1 = Mp1.evalf(mp.mp.dps)
-            # rmep1 = rmep1.evalf(mp.mp.dps)
-
-            # print('\n','Mp1',Mp1.evalf(3),'\n')
-            # print('\n','rmep1',rmep1.evalf(3),'\n')
-            # print('test Gauss jordan')
-            # soluchap, pa = (Mp1.gauss_jordan_solve(rmep1))
-            # print(soluchap,pa)
-
-            # print('test LU')
-            # soluchap = mp.lu_solve(Mp1, rmep1)
-            # soluchap = Matrix(soluchap)
-            # print(soluchap,pa)
-            # try:
-            #     soluchap, pa = (Mp1.gauss_jordan_solve(rmep1))
-            #     print(pa)
-            # except:
-            #     try:
-            #         print('Gauss pivot failed')
-            #         soluchap = mp.lu_solve(Mp1, rmep1)
-            #         soluchap = Matrix(soluchap)
-            #         pa == Matrix(0, 1, [])
-            #     except:
-            #         try:
-            #             print('Lu failed')
-            #             print('test pinv')
-            # try:
-            #     for vv in varom:
-            #         print('solve'+str(vv),solve(eqp.xreplace(
-            #             dict(zip(var_keep, varom))).doit(),vv))
-            #         print("solving without matrix")
-            # except:
-            #     print("didn't work")
-            #     pass
-            # try:
-            #     soluchap, pa = (Mp1.gauss_jordan_solve(rmep1))
-            # #     print(pa)
-            #     soluchap = sympify(mp.chop(mpmathM(soluchap),tol = 10**(-mp.mp.dps/2)))
-            # #     # print('gauss',soluchap.evalf(3))
-            # #     # print('test gauss',(Mp1*soluchap-rmep1).evalf(3))
-            # #
-            # except:
-                # print('Only one solution pinv', simplify(Mp1 * Mp1.pinv() * rmep1) == rmep1)
-                # print('sol without arbitrary matrix', (Mp1.pinv_solve(rmep1)).evalf(3))
-
-            # soluchap2 = Mp1.pinv_solve(rmep1)#, arbitrary_matrix=zeros(shape(Mp1)[0],1))
-            # #soluchap2 = sympify(mp.chop(mpmathM(soluchap2),tol = 10**(-mp.mp.dps/2)))
-            # print('sol pinv',soluchap2.evalf(3))
-            # # print(soluchap2.evalf(2))
-            # print('test pinv',simplify((Mp1*soluchap2-rmep1)).evalf(3))
-            try:
-                soluchap, pa = (Mp1.gauss_jordan_solve(rmep1))
-                print('gauss succeed')
-            except:
-                soluchap = Mp1.pinv_solve(
-                    rmep1, arbitrary_matrix=zeros(shape(Mp1)[0], 1))
-                soluchap = sympify(
-                    mp.chop(mpmathM(soluchap), tol=10**(-mp.mp.dps / 2)))
-                print('sol pinv arbitrary matrix 0', soluchap.evalf(3))
-                print('pinv succeed')
-            # soluchap2 = Mp1.pinv_solve(rmep1, arbitrary_matrix=ones(shape(Mp1)[0],1)*1e5)
-            # soluchap2 = sympify(mp.chop(mpmathM(soluchap2),tol = 10**(-mp.mp.dps/2)))
-            # print('sol pinv arbitrary matrix 1e5',soluchap2.evalf(3))
-            # #
-            #
-            # soluchap2 = Mp1.pinv_solve(rmep1, arbitrary_matrix=Matrix([0.5,1e3,-10,1e-3,5e5,9,8e2,3]))
-            # soluchap2 = sympify(mp.chop(mpmathM(soluchap2),tol = 10**(-mp.mp.dps/2)))
-            # print('sol pinv arbitrary matrix random',soluchap2.evalf(3))
-
-            pa = Matrix(0, 1, [])
-
-            #         except:
-            #             print('pinv fail')
-            #             pa = 1
-            # print('soluchap',soluchap,pa)
-
-            if pa == Matrix(0, 1, []):
-                sop = soluchap * ansatz
-                print('steady solution ok')
-            else:
-                raise(ValueError)
-            # else:
-            #     print('need time dependance')
-            #
-            #     # ##### Chop small values
-            #     (A1, Aeq), Beq = linear_ode_to_matrix(eqp, var_keep, t, 1)
-            #     # A1 = sympify(mpmathM(A1))
-            #     # Aeq = sympify(mpmathM(Aeq))
-            #     # print(Aeq)
-            #     # Beq = sympify(mpmathM(Beq))
-            #     # print(Beq)
-            #     Aeq_k = Aeq
-            #     Beq_k = Beq
-            #     eqp = (A1 * Matrix(var_keep)).diff(t) - \
-            #         Aeq * Matrix(var_keep) - Beq
-            #     #
-            #     # ######
-            #
-            #     eq_not = Matrix(np.array(eqp)[list(np.sum(A1, axis=1) == 0)])
-            #     # bug of sympy solve
-            #     eq_not = eq_not.row_insert(0, Matrix([100 * Symbol('ttu')]))
-            #     eq_not = eq_not.row_insert(0, Matrix([100 * Symbol('ttu')]))
-            #     ###############
-            #     s_not = solve(eq_not, rational=False)[0]
-            #     var = var.xreplace(s_not)
-            #     eqp = eqp.xreplace(s_not).doit()
-            #     ### compute p ####
-            #     pop = solve(eqp, Function('p' + str(i))(t), rational=False)
-            #     var = var.xreplace(pop)
-            #     eqp = eqp.xreplace(pop).doit()
-            #     (A1, Aeq), Beq = linear_ode_to_matrix(eqp, var_keep, t, 1)
-            #
-            #     eqs = Matrix(np.array(eqp)[list(np.sum(A1, axis=1) == 1)])
-            #     var_t = Matrix(np.array(var_keep)[
-            #                    list(np.sum(A1, axis=0) == 1)])
-            #
-            #     (A1, Aeq), Beq = linear_ode_to_matrix(eqs, var_t, t, 1)
-            #
-            #     AM = mpmathM(Aeq)
-            #     BM = mpmathM(Beq)
-            #     E, ER = mp.eig(AM)
-            #     E = E
-            #     ER = ER
-            #
-            #     hom = zeros(len(E), 1)
-            #
-            #     for kk in range(len(E)):
-            #
-            #         hom = hom + Symbol('C' + str(kk)) * \
-            #             Matrix((ER[:, kk])) * exp(E[kk] * t)
-            #     # try:
-            #
-            #     Aeq = sympify(mpmathM(Aeq))
-            #     Beq = sympify(mpmathM(Beq))
-            #     # part = mp.lu_solve(Aeq,-Beq)
-            #
-            #     print('\n', 'Aeq', Aeq.evalf(3), '\n')
-            #     print('\n', 'Beq', Beq.evalf(3), '\n')
-            #     try:
-            #         part, pars = Aeq.gauss_jordan_solve(-Beq)
-            #         print(pars)
-            #         taus_zeroes = {tau: 0 for tau in pars}
-            #         part_unique = part.xreplace(taus_zeroes)
-            #
-            #     except:
-            #         print('Gauss pivot failed')
-            #         print('test pinv')
-            #         part = Aeq.pinv_solve(-Beq,
-            #                               arbitrary_matrix=zeros(shape(Aeq)[0], 1))
-            #         part_unique = part
-            #
-            #     # part,pars = soluchap,pa
-            #         # part,pars = Aeq.gauss_jordan_solve(-Beq)
-            #     # except:
-            #     #     print("raté")
-            #
-            #     sol = hom + part_unique
-            #     ics = solve(sol.xreplace({t: 0}), rational=False)
-            #     soluchap = sol.xreplace(ics)
-            #     soluchap = var.xreplace(dict(zip(var_t, soluchap)))
-            #     sop = soluchap * ansatz
-            so_part = so_part + sop
-
-    #####################################
-    ######  Homogeneous solution  #######
-    #####################################
-    if (iv, it) != (0, 0) and (iv, it) != (1, 0):
-        print("Homogeneous solution")
-
-        # Create the variable as Ubnd = Sum(U,0,n-1) + Upart + U hom
-        Usopart = so_part[0] * C.i + \
-            so_part[1] * C.j + so_part[2] * C.k
-        Bsopart = so_part[4] * C.i + \
-            so_part[5] * C.j + so_part[6] * C.k
-        psopart = so_part[3]
-        rhosopart = so_part[7]
-        ### test of res of particular sol ###
-        if params.test == 1:
-            print('Test of the particular solutions at order E', (iv, it))
-            testequations = makeEquations(
-                U + ev**iv * et**it * Usopart, B + ev**iv * et**it * Bsopart, p + ev**iv * et**it * psopart, rho + ev**iv * et**it * rhosopart, iv, it, {**dico0, **dico1})
-            testequations = simplify(testequations.xreplace(
-                {x: 1, y: 0, z: -1, t: 0})).evalf()
-            testequations = simplify(testequations.evalf())
-            print('Residuals = ')
-            print(testequations)
-    #     #
-        # + ev**iv * et**it * (Function('Uhomx')(x, y, z, t)
-        Ubnd = U + ev**iv * et**it * Usopart
-        # * C.i + Function('Uhomy')(x, y, z, t) * C.j + Function('Uhomz')(x, y, z, t) * C.k)
-        # + ev**iv * et**it * (Function('Bhomx')(x, y, z, t)
-        Bbnd = B + ev**iv * et**it * Bsopart
-        # * C.i + Function('Bhomy')(x, y, z, t) * C.j + Function('Bhomz')(x, y, z, t) * C.k)
-        # + ev**iv * et**it * (Symbol('Uhomx')* C.i + Symbol('Uhomy') * C.j + Symbol('Uhomz') * C.k)
-        Ubnd = U + ev**iv * et**it * Usopart
-        # + ev**iv * et**it *  (Symbol('Bhomx')* C.i + Symbol('Bhomy') * C.j + Symbol('Bhomz') * C.k)
-        Bbnd = B + ev**iv * et**it * Bsopart
-
-    # Calculate the boundary conditions equations
-        psiBnd = psi
-        psiBnd_2 = psi_2b
-
-        TEq = Bound_nosolve(Ubnd, Bbnd, psiBnd, psiBnd_2,
-                            {**dico0, **dico1}, iv, it)
-        expo = findexp(TEq)
-        # if iv == 1 and it == 1:
-        #     expo = {exp(C.x*I + C.y*I + omega*I*t), exp(-C.x*I -C.y*I -omega*I*t)}
-        # Uh = U_ord_0
-        # Bh = B_ord_0
-        # ph = p_ord_0
-        # rhoh = rho_ord_0
-        Uh = U + ev**iv * et**it * Usopart
-        Bh = B + ev**iv * et**it * Bsopart
-        ph = p + ev**iv * et**it * psopart
-        rhoh = rho + ev**iv * et**it * rhosopart
-        for ex in expo:
-            ansatz = ex * exp(I * kz * z)
-
-            Uh = Uh + ev**iv * et**it * (Symbol('u' + str(i) + 'x') * C.i + Symbol(
-                'u' + str(i) + 'y') * C.j + Symbol('u' + str(i) + 'z') * C.k) * ansatz
-            # if iv==1 and it ==0 and params.condB =='Thick':
-            #     Bh = Bh + ev**iv * et**it * (Symbol('b' + str(i) + 'x') * C.i + Symbol(
-            #         'b' + str(i) + 'y') * C.j ) * ansatz
-            # else:
-            Bh = Bh + ev**iv * et**it * (Symbol('b' + str(i) + 'x') * C.i + Symbol(
-                'b' + str(i) + 'y') * C.j + Symbol('b' + str(i) + 'z') * C.k) * ansatz
-            ph = ph + ev**iv * et**it * (Symbol('p' + str(i))) * ansatz
-            rhoh = rhoh + ev**iv * et**it * (Symbol('rho' + str(i))) * ansatz
-
-        # Calculate the governings equations
-
-        # {**dico0, **dico1})
-        eq = makeEquations(Uh, Bh, ph, rhoh, iv, it, {**dico0, **dico1})
-        var = [Symbol('u' + str(i) + 'x'), Symbol('u' + str(i) + 'y'), Symbol('u' + str(i) + 'z'), Symbol('p' + str(i)),
-               Symbol('b' + str(i) + 'x'), Symbol('b' + str(i) + 'y'), Symbol('b' + str(i) + 'z'), Symbol('rho' + str(i))]
-        Mhtot, rmehtot = linear_eq_to_matrix(eq, var)
-
-        expeq = findexp(Mhtot)
-
-        if params.test == 1:
-            print('rmehtot', simplify(simplify(rmehtot.xreplace({**dico0, **dico1}).xreplace(
-                {x: 0, y: 0, t: 0, z: 0}).evalf())))
-
-        UBnd = U + ev**iv * et**it * Usopart
-        BBnd = B + ev**iv * et**it * Bsopart
-
-        # Decompose equations by exponential create and solve matrix
-
-        # expeq = list(expeq)
-        sol = np.zeros(len(expeq), dtype=object)
-        eig = np.zeros(len(expeq), dtype=object)
-        kzpsi = np.zeros(len(expeq), dtype=object)
-        kzpsi_2 = np.zeros(len(expeq), dtype=object)
-
-        # Mhtotcount = Mhtot
-        # print('expeq',expeq)
-
-        for j, ansatz in enumerate(expeq):
-
-            print('anstaz', ansatz)
-            def coe(x): return x.coeff(ansatz)
-            M = Mhtot.applyfunc(coe)
-            ansatz0 = ansatz.xreplace({z: 0})
-            tilt = (simplify((gradient(ansatz0) / ansatz0)
-                             ).normalize()).to_matrix(C)
-            print('tilt', tilt)
-            if sum(abs(tilt)) == 0:
-                print('NS not tilted')
-                # tilt = ((C.j).normalize()).to_matrix(C)
-                # MNS = M.row((0,1,3))
-                # NS_modif = ((MNS.T)*(tilt)).T
-                # M[0,:] = NS_modif
-                M.row_del(2)  # remove useless equation
-                M = M.xreplace({y: 0})
-            else:
-
-                MNS = M.row((0, 1, 3))
-                NS_modif = ((MNS.T) * (tilt)).T
-                M[0, :] = NS_modif
-                M.row_del(1)  # remove useless equation
-                M = M.xreplace({y: 0})
-
-            sol[j], eig[j], M1 = eigen(M, {**dico0, **dico1})
-
-            # Create variable necessary to apply boundary conditions
-
-            UBnd = UBnd + ev**iv * et**it * (((Symbol('u' + str(i) + 'x') * C.i + Symbol(
-                'u' + str(i) + 'y') * C.j + Symbol('u' + str(i) + 'z') * C.k))).xreplace(makedic(veigen(eig[j], sol[j]), i))
-            BBnd = BBnd + ev**iv * et**it * (((Symbol('b' + str(i) + 'x') * C.i + Symbol(
-                'b' + str(i) + 'y') * C.j + Symbol('b' + str(i) + 'z') * C.k))).xreplace(makedic(veigen(eig[j], sol[j]), i))
-
-            psian = ev**iv * et**it * Symbol('psi' + str(i)) * ansatz
-            if params.condB == "harm pot":
-                kzpsi[j] = np.array(
-                    solve(simplify(laplacian(psian) / psian), kz, rational=False))
-                kzpsi[j] = kzpsi[j][[
-                    np.imag(np.complex128(kps)) >= 0 for kps in kzpsi[j]]][0]
-                psiBnd = psiBnd + ev**iv * et**it * \
-                    (Symbol('psi' + str(i)) * ansatz).xreplace({kz: kzpsi[j]})
-                if Bound_nb == 2:
-                    kzpsi_2[j] = -kzpsi[j]
-                    psiBnd_2 = psiBnd_2 + ev**iv * et**it * \
-                        (Symbol('psi_2b' + str(i)) *
-                         ansatz).xreplace({kz: kzpsi_2[j]})
-
-            if params.condB == "Thick":
-
-                if buf == 1:
-                    kzpsi[j] = np.array(solve(simplify((diff(psian, t) - qRmm * diff(
-                        psian, z, z)) / psian).xreplace({**dico1, **dico0}), kz, rational=False))
-                else:
-                    kzpsi[j] = np.array(solve(simplify((diff(psian, t) - qRmm * laplacian(
-                        psian)) / psian).xreplace({**dico1, **dico0}), kz, rational=False))
-                kzpsi[j] = np.array([kzps.evalf(mp.mp.dps)
-                                    for kzps in kzpsi[j]])
-                kzpsi[j] = kzpsi[j][[
-                    np.imag(np.complex128(kps)) >= 0 for kps in kzpsi[j]]][0]
-                psiBnd = psiBnd + ev**iv * et**it * \
-                    ((Symbol('bmx') * C.i + Symbol('bmy') * C.j +
-                     Symbol('bmz') * C.k) * ansatz).xreplace({kz: kzpsi[j]})
-
-                if Bound_nb == 2:
-                    kzpsi_2[j] = np.array(solve(simplify((diff(psian, t) - qRmc * laplacian(
-                        psian)) / psian).xreplace({**dico1, **dico0}), kz, rational=False))
-                    kzpsi_2[j] = np.array([kzps.evalf(mp.mp.dps)
-                                          for kzps in kzpsi_2[j]])
-                    kzpsi_2[j] = kzpsi_2[j][[
-                        np.imag(np.complex128(kps)) <= 0 for kps in kzpsi_2[j]]][0]
-                    psiBnd_2 = psiBnd_2 + ev**iv * et**it * \
-                        ((Symbol('bmx_2') * C.i + Symbol('bmy_2') * C.j +
-                         Symbol('bmz_2') * C.k) * ansatz).xreplace({kz: kzpsi_2[j]})
-        # Calculate boundary conditions equations
-        # if params.test == 1:
-        #     print('Mhtotcount', simplify(simplify(Mhtotcount)))
-
-        # Add constant value for homogeneous solutions
-        UBnd += ev**iv * et**it * (Symbol('CUx') * C.i + Symbol('CUy')
-                                   * C.j + Symbol('CUz') * C.k)
-        BBnd += ev**iv * et**it * (Symbol('CBx') * C.i + Symbol('CBy')
-                                   * C.j + Symbol('CBz') * C.k)
-        Eqbound = Bound_nosolve(UBnd, BBnd, psiBnd, psiBnd_2, {
-            **dico0, **dico1}, iv, it)
-    # Decompose equations by exponential create and solve matrix
-
-        if params.condB == "Thick":
-            if Bound_nb == 1:
-                coeffs = [Symbol('C' + str(i)) for i in range(len(Eqbound) - 3)
-                          ] + [Symbol('bmx'), Symbol('bmy'), Symbol('bmz')]
-            if Bound_nb == 2:
-                coeffs = [Symbol('C' + str(i)) for i in range(len(Eqbound) - 6)] + [Symbol('bmx_2'),
-                                                                                    Symbol('bmy_2'), Symbol('bmz_2')] + [Symbol('bmx'), Symbol('bmy'), Symbol('bmz')]
-
-        else:
-            if Bound_nb == 1:
-                coeffs = [Symbol('C' + str(i)) for i in range(len(Eqbound) - 1)] + [Symbol(
-                    "psi" + str(i))]
-            if Bound_nb == 2:
-                coeffs = [Symbol('C' + str(i)) for i in range(len(Eqbound) - 2)] + [Symbol(
-                    "psi" + str(i)), Symbol("psi_2b" + str(i))]
-        Matbtot, resbtot = linear_eq_to_matrix(Eqbound, coeffs)
-
-        Matcount = Matbtot
-        rescount = resbtot
-        for j, ansatz in enumerate(expeq):
-            print('ansatz', ansatz.evalf(3))
-
-            def coe(x): return x.coeff(ansatz.xreplace({z: 0}))
-
-            Mat = (Matbtot).applyfunc(coe)  # .evalf(mp.mp.dps*3)
-            res = (resbtot).applyfunc(coe)  # .evalf(mp.mp.dps*3)
-
-            # try:
-            #     abc,par_abc = Mat.gauss_jordan_solve(res)
-            # except:
-            #     print('Gauss pivot failed')
-            try:
-                abc, par_abc = Mat.gauss_jordan_solve(res)
-            except:
-                print('Gauss pivot failed')
-                print('pinv')
-
-                abc = Mat.pinv_solve(
-                    res, arbitrary_matrix=zeros(shape(Mat)[0], 1))
-
-            # verification
-            Matcount = Matcount - ((Matbtot).applyfunc(coe)
-                                   * (ansatz.xreplace({z: 0})))
-            rescount = rescount - ((rescount).applyfunc(coe)
-                                   * (ansatz.xreplace({z: 0})))
-            # if abs(sum(((Matbtot).applyfunc(coe) * Matrix(abc) - (resbtot).applyfunc(coe)).evalf())) > 10**(-mp.mp.dps+mp.mp.dps/5) :
-            #     print('error of :', abs(sum(((Matbtot).applyfunc(coe) *
-            #                                  Matrix(abc) - (resbtot).applyfunc(coe)).evalf())))
-            #     raise ValueError
-
-            # Write homogeneous solution
-            solhom = zeros(8, 1)
-
-            for l in range(len(sol[j])):
-
-                solhom = solhom + \
-                    abc[l] * Matrix(eig[j][l]) * \
-                    ansatz.xreplace({kz: sol[j][l]})
-
-            abc = list(abc)
-    # Expression of the final calculated variable Un
-
-            U = U + ev**iv * et**it * (solhom[0] * C.i + solhom[1]
-                                       * C.j + solhom[2] * C.k)
-            B = B + ev**iv * et**it * (solhom[4] * C.i + solhom[5]
-                                       * C.j + solhom[6] * C.k)
-            p = p + ev**iv * et**it * solhom[3]
-            rho = rho + ev**iv * et**it * solhom[7]
-
-            if params.condB == "Thick":
-                psi = psi + ev**iv * et**it * (abc[-3] * C.i + abc[-2] * C.j + abc[-1] * C.k) * \
-                    ansatz.xreplace({kz: kzpsi[j]})
-                if Bound_nb == 2:
-                    psi_2b = psi_2b + ev**iv * et**it * (abc[-6] * C.i + abc[-5] * C.j + abc[-4] * C.k) * \
-                        ansatz.xreplace({kz: kzpsi_2[j]})
-
-            else:
-                if Bound_nb == 1:
-                    psi = psi + ev**iv * et**it * abc[-1] * \
-                        ansatz.xreplace({kz: kzpsi[j]})
-                if Bound_nb == 2:
-                    psi = psi + ev**iv * et**it * abc[-2] * \
-                        ansatz.xreplace({kz: kzpsi[j]})
-                    psi_2b = psi_2b + ev**iv * et**it * \
-                        abc[-1] * ansatz.xreplace({kz: -kzpsi[j]})
-
-        rescount = simplify(simplify(simplify(rescount))).xreplace({x: 1})
-        if params.test == 1:
-            print('Matcount', simplify(simplify(simplify(Matcount))))
-            print('rescount ::::::::::::::::::::', rescount)
-
-        U = U + ev**iv * et**it * Usopart
-        B = B + ev**iv * et**it * Bsopart
-        p = p + ev**iv * et**it * psopart
-        rho = rho + ev**iv * et**it * rhosopart
-        # B = B + ev**iv * et**it*(rescount[1]*C.i+rescount[2]*C.j+rescount[3]*C.k)
-
-        const = solve(rescount, rational=False)
-        print('const', const)
-        U += ev**iv * et**it * (Symbol('CUz') * C.k)
-        B += ev**iv * et**it * (Symbol('CBx') * C.i + Symbol('CBy')
-                                * C.j + Symbol('CBz') * C.k)
-        U = U.xreplace(const)
-        B = B.xreplace(const)
-
-        U = (U.xreplace({**dico0, **dico1}).xreplace({**dico0, **dico1})
-             ).xreplace({Symbol('tau0'): 0})  # .xreplace({Symbol('tau1'):1})
-        B = (B.xreplace({**dico0, **dico1}).xreplace({**dico0, **dico1})
-             ).xreplace({Symbol('tau0'): 0})  # .xreplace({Symbol('tau1'):1})
-        # .xreplace({Symbol('tau0'):1}).xreplace({Symbol('tau1'):1})
-        rho = (rho.xreplace({**dico0, **dico1}).xreplace({**
-               dico0, **dico1})).xreplace({Symbol('tau0'): 0})
-        # .xreplace({Symbol('tau0'):1}).xreplace({Symbol('tau1'):1})
-        p = (p.xreplace({**dico0, **dico1}).xreplace({**
-             dico0, **dico1})).xreplace({Symbol('tau0'): 0})
-        # psi = psi.xreplace({Symbol('tau0'):0})#.xreplace({Symbol('tau0'):1}).xreplace({Symbol('tau1'):1})
-        # psi_2b = psi_2b.xreplace({Symbol('tau0'):0})#.xreplace({Symbol('tau0'):1}).xreplace({Symbol('tau1'):1})
-
-        # print('\n U : ',simp(U.evalf(3)),'\n')
-        # print('\n B : ',simp(B.evalf(3)),'\n')
-        # print('\n p : ',simp(p.evalf(3)),'\n')
-        # print('\n rho : ',simp(rho.evalf(3)),'\n')
-        # print('\n psi : ',simp(psi.evalf(3)),'\n')
-        #
-    test_res = False
-    if test_res == True:
-        testbound = Bound_nosolve(U, B, psi, psi_2b, {
-            **dico0, **dico1}, 'no', 'no')
-        print('testbound0K')
-
-        zeta_test = 1e-5
-        lim_res = 1e-12
-        res_test = 1
-        while lim_res * (2) < res_test or res_test < lim_res / (2):
-            sumres = 0
-            for j, ree in enumerate(testbound):
-                free = lambdify([x, ev, et], ree**2)
-                sumres += integ.quad(lambda x: free(x, 1,
-                                     zeta_test), -np.pi, np.pi)[0] / (2 * np.pi)
-            res_test = sumres
-            if res_test > lim_res:
-                zeta_test = zeta_test / 2
-            elif res_test < lim_res:
-                    zeta_test = zeta_test * 1.5
-            print(res_test, zeta_test)
-        print('final', res_test, zeta_test)
     ### TEST ###
-    if params.test == 1:
-
-        testbound = Bound_nosolve(U, B, psi, psi_2b, {
-            **dico0, **dico1}, iv, it)
-        testbound = testbound.xreplace({x: mp.pi / 4, y: 0, t: 0}).evalf()
-        # print('testbound',testbound)
-        testbound = mp.chop(mpmathM(testbound.evalf(3)),
-                            tol=10**(-mp.mp.dps / 1.2))
-        print('BC Order' + str(iv) + ',' + str(it))
-        print(testbound)
-
-        testequations = makeEquations(U, B, p, rho, iv, it, {**dico0, **dico1})
-        testequations = testequations.xreplace(
-            {x: mp.pi / 4, y: 0, t: 0, z: 0}).evalf()
-        # print('testequations',testequations)
-        testequations = mp.chop(
-            mpmathM(testequations.evalf(3)), tol=10**(-mp.mp.dps / 1.2))
-        print('Equations Order ' + str(iv) + ',' + str(it))
-        print(testequations)
+# if params.test == 1:
+#
+#     testbound = Bound_nosolve(U, B, psi, psi_2b, {
+#         **DIC, **DIC}, iv, it)
+#     testbound = testbound.xreplace({x: mp.pi / 4, y: 0, t: 0}).evalf()
+#     # print('testbound',testbound)
+#     testbound = mp.chop(mpmathM(testbound.evalf(3)),
+#                         tol=10**(-mp.mp.dps / 1.2))
+#     print('BC Order' + str(iv) + ',' + str(it))
+#     print(testbound)
+#
+#     testequations = makeEquations(U, B, p, rho, iv, it, DIC)
+#     testequations = testequations.xreplace(
+#         {x: mp.pi / 4, y: 0, t: 0, z: 0}).evalf()
+#     # print('testequations',testequations)
+#     testequations = mp.chop(
+#         mpmathM(testequations.evalf(3)), tol=10**(-mp.mp.dps / 1.2))
+#     print('Equations Order ' + str(iv) + ',' + str(it))
+#     print(testequations)
 
         #
         # print('All Bound Cond' + str(iv)+','+str(it))
         # un = U.dot(n)
-        # Eq_n1 = surfcond(un, {**dico0, **dico1}).xreplace({**dico0, **dico1})
-        # conservation_B = surfcond(B-psi,{**dico0, **dico1})
+        # Eq_n1 = surfcond(un, DIC).xreplace(DIC)
+        # conservation_B = surfcond(B-psi,DIC)
         # conservation_E = qRm*curl(B)-qRmm*curl(psi)-(U.cross(B))
         # if buf==1:
         #     conservation_E = qRm*diff(B,z)-qRmm*diff(psi,z)+qAl*U
-        # consE = surfcond(conservation_E,{**dico0, **dico1})
+        # consE = surfcond(conservation_E,DIC)
         # Mat= [Eq_n1,consE&C.i,consE&C.j,consE&C.k,conservation_B&C.i,conservation_B&C.j,conservation_B&C.k]
-        # Mat = Matrix([taylor(eq,iv,it,{**dico0, **dico1})
+        # Mat = Matrix([taylor(eq,iv,it,DIC)
         #        for eq in Mat])
         # Mat =Mat.xreplace({x: mp.pi/4, y: 0, t: 0, z: 0}).xreplace({et:1,ev:1}).evalf()
         # testequations = mpmathM(Mat.evalf(3))
@@ -1334,15 +1305,15 @@ for i in range(0, len(orders)):
 
         # test of the residuals of the boundary conditions:
 
-            # zeta0 = 1e-2
-            # res = 1
-            # lim_res =1e-5
-            # while res > lim_res:
-            #     res = np.abs(np.real(np.complex128(sum(testbound.xreplace({et:zeta0}).evalf()))))
-            #     zeta0= zeta0/2
-            #     print(zeta0)
-            # print('zeta0 min =',zeta0,'  with res ', res)
-            # print(testbound.xreplace({et:zeta0}).evalf())
+        # zeta0 = 1e-2
+        # res = 1
+        # lim_res =1e-5
+        # while res > lim_res:
+        #     res = np.abs(np.real(np.complex128(sum(testbound.xreplace({et:zeta0}).evalf()))))
+        #     zeta0= zeta0/2
+        #     print(zeta0)
+        # print('zeta0 min =',zeta0,'  with res ', res)
+        # print(testbound.xreplace({et:zeta0}).evalf())
 
 
 print("Finish")
@@ -1355,8 +1326,8 @@ if params.pressure_stress == True:
     Bt = simp(realve(B))
     P = simp(((conj(p) + p) / 2))
     nn = simp(realve(n))
-    Fp = surfcond(simp((P * nn)), {**dico0, **dico1})
-    Fpm = surfcond(simp((((Bt.dot(Bt)) / 2) * nn)), {**dico0, **dico1})
+    Fp = surfcond(simp((P * nn)), DIC)
+    Fpm = surfcond(simp((((Bt.dot(Bt)) / 2) * nn)), DIC)
     Fptay = taylor_serie((Fp & C.i) - (Fpm & C.i), iv * 2, it * 2, {})
     ValPress = meanterm(expand((Fptay)))
     print('= ', ValPress.evalf())
@@ -1372,7 +1343,7 @@ if params.pressure_stress == True:
     #
     # Fp = ((p * nre)).xreplace({conjugate(x): x,
     #                            conjugate(y): y, conjugate(z): z})
-    # Fptay = surfcond(Fp, {**dico0, **dico1}).xreplace({et: 1e-3, p0: 0,t:0})
+    # Fptay = surfcond(Fp, DIC).xreplace({et: 1e-3, p0: 0,t:0})
     # #Fptay = taylor_series(Fp, 0, (order * 2),e).xreplace({e: zeta, p0: 0,t:0}).xreplace(dic)
     # FFp = lambdify((x, y), Fptay, 'mpmath')
     # print("precessing quad")
@@ -1396,7 +1367,7 @@ if params.ohmic_dissipation == True:
     Phi_T = meanterm(Phi_T)
     Phi_m_T = meanterm(Phi_m_T)
     Diss = simp(((integrate(Phi_T, (z, -oo, 0)) + integrate(Phi_m_T,
-                (z, 0, oo))).xreplace({**dico0, **dico1}))).evalf()
+                (z, 0, oo))).xreplace(DIC))).evalf()
     # print('Dissipation at order',OO[1],OO[0],' = ',Diss.evalf())
     QFR = params.QFR
     print([QFR, str(re(Diss.evalf()))])
@@ -1409,7 +1380,7 @@ if params.ohmic_dissipation == True:
     #         Phi_m_T = taylor(Phi_m,OO[1],OO[0],{})
     #         Phi_T = meanterm(Phi_T)
     #         Phi_m_T = meanterm(Phi_m_T)
-    #         Diss = simp(((integrate(Phi_T,(z,-oo,0))+integrate(Phi_m_T,(z,0,oo))).xreplace({**dico0, **dico1}))).evalf()
+    #         Diss = simp(((integrate(Phi_T,(z,-oo,0))+integrate(Phi_m_T,(z,0,oo))).xreplace(DIC))).evalf()
     #         print('Dissipation at order',OO[1],OO[0],' = ',Diss.evalf())
     #         print([LAT,np.real(np.complex128(Diss.evalf()))])
     #     except:
@@ -1417,24 +1388,24 @@ if params.ohmic_dissipation == True:
 
 
 if params.write_file == True:
-    topo1 = (-(f - f0)).xreplace({**dico0, **dico1})
-    dic_meta = {'U0x': U0 * dico0[u0x],
-                'U0y': U0 * dico0[u0y],
-                'B0x': qAl * dico0[b0x],
-                'B0y': qAl * dico0[b0y],
-                'B0z': qAl * dico0[b0z],
-                'Ro': 1 / dico1[qRo],
+    topo1 = (-(f - f0)).xreplace(DIC)
+    dic_meta = {'U0x': U0 * DIC[u0x],
+                'U0y': U0 * DIC[u0y],
+                'B0x': qAl * DIC[b0x],
+                'B0y': qAl * DIC[b0y],
+                'B0z': qAl * DIC[b0z],
+                'Ro': 1 / DIC[qRo],
                 'LAT': LAT,
-                'Al': 1 / dico1[qAl],
-                'Fr': 1 / dico1[qFr],
-                'Rm': 1 / dico1[qRm],
-                'Rmm': 1 / dico1[qRmm],
-                'Rmc': 1 / dico1[qRmc],
-                'Rl':  dico1[Rl],
-                'omega': dico1[omega],
+                'Al': 1 / DIC[qAl],
+                'Fr': 1 / DIC[qFr],
+                'Rm': 1 / DIC[qRm],
+                'Rmm': 1 / DIC[qRmm],
+                'Rmc': 1 / DIC[qRmc],
+                'Rl':  DIC[Rl],
+                'omega': DIC[omega],
                 'condB': params.condB,
                 'atmo': params.atmo,
-                'order_list': orders.tolist()}
+                'order_list': order_list}
     # for keys in dic_meta:
     #     try:
     #         dic_meta[keys] = str(S(dic_meta[keys]).evalf(3))
@@ -1444,10 +1415,10 @@ if params.write_file == True:
         'topo': topo1,
         'meta': dic_meta,
         'Expr': Matrix([U & C.i, U & C.j, U & C.k, p,
-                    B & C.i, B & C.j, B & C.k, rho, psi])
-                    }
+                        B & C.i, B & C.j, B & C.k, rho, psi])
+    }
     if Bound_nb == 2:
-        topo2 = (-(f_2 - f0_2)).xreplace({**dico0, **dico1})
+        topo2 = (-(f_2 - f0_2)).xreplace(DIC)
         data['topo2'] = topo2
     with open(params.filename + '.dat', "wb") as f:
         pickle.dump(data, f)
